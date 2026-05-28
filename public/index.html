@@ -15,12 +15,18 @@
     font-family: 'Inter', system-ui, sans-serif;
     background: #08080A;
     color: #F4F4F5;
-    overflow-x: auto;
+    overflow-x: hidden;
   }
+  /* Desktop: fixed-width centred layout */
   #root {
     width: 1300px;
     margin: 0 auto;
     min-height: 100%;
+  }
+  /* Mobile: full-width, no horizontal scroll */
+  @media (max-width: 767px) {
+    body { overflow-x: hidden; }
+    #root { width: 100%; }
   }
   * { box-sizing: border-box; }
   input { font-family: inherit; }
@@ -46,9 +52,47 @@
 <script src="data.js"></script>
 <script type="text/babel" src="components.jsx"></script>
 <script type="text/babel" src="app.jsx"></script>
+<script type="text/babel" src="mobile-app.jsx"></script>
 
 <script type="text/babel" data-presets="react">
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+// ── Root: routes between desktop and mobile layouts ───────────────────────────
+// Detection runs once on load — no mid-session switching.
+// Three independent signals: UA, viewport width (CSS pixels), pointer type.
+// Any one being true is enough to go mobile.
+function isMobileDevice() {
+  const byUA = /Mobi|Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAgent);
+  const byWidth = window.innerWidth < 768;
+  const byPointer = window.matchMedia('(pointer: coarse)').matches;
+  return byUA || byWidth || byPointer;
+}
+
+const THEME_KEY = 'if_v2_theme';
+
+function Root() {
+  const mobile = React.useMemo(() => isMobileDevice(), []);
+
+  // Shared theme state (mobile uses it directly; desktop App manages its own
+  // but reads the same localStorage key on init, so they stay in sync).
+  const [dark, setDark] = React.useState(() => {
+    try {
+      const saved = localStorage.getItem(THEME_KEY);
+      if (saved !== null) return saved === 'dark';
+    } catch (e) {}
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
+
+  const handleTheme = (isDark) => {
+    setDark(isDark);
+    try { localStorage.setItem(THEME_KEY, isDark ? 'dark' : 'light'); } catch (e) {}
+  };
+
+  if (mobile) {
+    return <MobileApp dark={dark} onThemeChange={handleTheme} />;
+  }
+  return <App />;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<Root />);
 </script>
 </body>
 </html>
