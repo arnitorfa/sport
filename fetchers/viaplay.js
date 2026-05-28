@@ -60,7 +60,8 @@ const VIAPLAY_SPORT_MAP = {
   'rugby':              'rugby',
   'american-football':  'rugby',
   'nfl':                'rugby',
-  'other':              'fb',
+  // 'other' intentionally omitted — fall through to text detection instead
+  // so that pool/billiards events under /other/ get correctly identified.
 };
 
 // seriesTitle is e.g. "MotoGP", "Moto2", "WorldSBK" — often the only reliable

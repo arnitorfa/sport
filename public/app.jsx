@@ -741,7 +741,9 @@ function App() {
           <img
             src={`assets/logos/sportzone-${isDark ? 'dark' : 'light'}.svg`}
             alt="SportZone"
-            style={{ height: 28, width: 'auto', display: 'block' }}
+            onClick={() => window.location.reload()}
+            title="Endurhlaða síðuna"
+            style={{ height: 28, width: 'auto', display: 'block', cursor: 'pointer' }}
           />
         </div>
 
@@ -753,7 +755,8 @@ function App() {
             style={ifS.searchInput}
             placeholder="Leita að liði, íþrótt, keppni…"
             value={search}
-            onChange={(e) => setSearch(e.target.value)} />
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Escape') { setSearch(''); setDebouncedSearch(''); e.target.blur(); } }} />
           {search ? (
             <button onClick={() => { setSearch(''); setDebouncedSearch(''); }}
                     style={{ background: 'none', border: 'none', cursor: 'pointer',
