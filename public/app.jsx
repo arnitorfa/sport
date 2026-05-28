@@ -440,11 +440,13 @@ function App() {
       padding: isMobile ? '8px 12px' : '10px 28px',
       borderBottom: `1px solid ${pal.hair}`,
     },
+    // Primary row uses enough columns to fit all 9 primary sports + toggle in one line.
+    // Secondary row (see filterRowSecondary) stays at 7 so Hjólreiðar falls under Íshokkí.
     filterRow: isMobile ? {
       display: 'flex', overflowX: 'auto', overflowY: 'hidden',
       gap: 4, scrollbarWidth: 'none', msOverflowStyle: 'none',
     } : {
-      display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4,
+      display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 4,
     },
     sportChip: (active, isFav) => ({
       display: 'flex', flexDirection: 'column', alignItems: 'center',
@@ -797,22 +799,6 @@ function App() {
                   <div style={{ fontSize: 13, fontWeight: 700 }}>{user.name}</div>
                   <div style={{ fontSize: 11, color: pal.muted, marginTop: 2 }}>{user.email}</div>
                 </div>
-                <button onClick={() => { setShowLogos(true); setUserMenu(false); }}
-            style={{
-              width: '100%', padding: '8px 10px', borderRadius: 6,
-              border: 'none', background: 'transparent', textAlign: 'left',
-              color: pal.fg, fontSize: 12.5, cursor: 'pointer',
-              fontFamily: 'inherit', marginTop: 4,
-              display: 'flex', alignItems: 'center', gap: 8
-            }}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-                       stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="4" width="18" height="16" rx="2" />
-                    <circle cx="9" cy="10" r="1.6" />
-                    <path d="M21 16 L15 11 L7 18" />
-                  </svg>
-                  Merki stöðvanna
-                </button>
                 <button onClick={() => {
                   window.IF_SUPABASE?.auth.signOut();
                   setUser(null); setUserMenu(false);
@@ -873,9 +859,12 @@ function App() {
             </button>
           )}
         </div>
-        {/* Secondary row: appears below, also 7 per row */}
+        {/* Secondary row: 7-column grid so Hjólreiðar falls under Íshokkí etc. */}
         {moreSportsOpen && (
-          <div style={{ ...ifS.filterRow, marginTop: 4 }}>
+          <div style={isMobile
+            ? { ...ifS.filterRow, marginTop: 4 }
+            : { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginTop: 4 }
+          }>
             {D.sports.filter((s) => s.secondary).map((sp) => renderSportChip(sp))}
           </div>
         )}
