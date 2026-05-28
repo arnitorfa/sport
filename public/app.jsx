@@ -2,6 +2,30 @@
 
 const { StationLogo, StarPopover, LoginModal, LogoSettings, SportIcon, readLS, writeLS, LS, resolveLogoUrl } = window.IF_COMPS;
 
+// ── Session-type detector for motorsport events ───────────────────────────────
+// Returns 'Æfing', 'Tímataka', 'Keppni', or null for non-motorsport sessions.
+function getSessionType(title, sub) {
+  const t = ((title || '') + ' ' + (sub || '')).toLowerCase();
+  // Practice / warm-up / training
+  if (/\bfp[1-4]\b/.test(t) || t.includes('free practice') || t.includes('practice session') ||
+      t.includes('training') || t.includes('æfing') || t.includes('warm-up') ||
+      t.includes('warm up') || t.includes('warmup') ||
+      // standalone "practice" not inside other words
+      /\bpractice\b/.test(t))
+    return 'Æfing';
+  // Qualifying / superpole / shootout
+  if (t.includes('qualifying') || t.includes('qualification') || t.includes('qualy') ||
+      t.includes('superpole') || t.includes('tímataka') || t.includes('shootout') ||
+      /\bq[123]\b/.test(t))
+    return 'Tímataka';
+  // Race / sprint / grand prix
+  if (t.includes('grand prix') || t.includes('sprint race') || t.includes('feature race') ||
+      t.includes('main race') || /\brace\b/.test(t) || /\bkeppni\b/.test(t) ||
+      t.includes('sprint') && !t.includes('qualifying'))
+    return 'Keppni';
+  return null;
+}
+
 // add 'logos' key to LS namespace
 LS.logos = 'if_v2_station_logos';
 
@@ -40,6 +64,9 @@ function App() {
   const [events, setEvents] = React.useState([]);
   const [loading, setLoading] = React.useState(false);
   const [fetchError, setFetchError] = React.useState(null);
+  // today's events — kept separate so the "Í beinni núna" panel always shows
+  // what's live right now, regardless of which day is selected in the date strip.
+  const [todayEvents, setTodayEvents] = React.useState([]);
 
   // ── event counts for all days in the date strip ──
   const [dayCounts, setDayCounts] = React.useState({});
@@ -54,6 +81,8 @@ function App() {
       .then((data) => {
         const evs = data.events || [];
         setEvents(evs);
+        // If today is selected, also keep todayEvents current
+        if (date === 0) setTodayEvents(evs);
         // Update count for the currently-selected day immediately
         setDayCounts((prev) => ({ ...prev, [dateObj.isoDate]: evs.length }));
         setLoading(false);
@@ -64,6 +93,18 @@ function App() {
         setLoading(false);
       });
   }, [date]);
+
+  // Always fetch today's events on mount so the live panel works even when
+  // the user navigates to a different day.
+  React.useEffect(() => {
+    const todayObj = D.dates.find((d) => d.offset === 0);
+    if (!todayObj) return;
+    fetch(`/api/events?date=${todayObj.isoDate}`)
+      .then((r) => r.json())
+      .then((data) => setTodayEvents(data.events || []))
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Prefetch event counts for all other dates in the background
   React.useEffect(() => {
@@ -132,7 +173,16 @@ function App() {
     return hay.includes(q);
   });
 
-  const live = filtered.filter((e) => e.status === 'live');
+  // Live panel always reflects what's happening RIGHT NOW (today's events),
+  // regardless of which day is selected in the date strip.
+  const live = todayEvents
+    .filter((e) => stations.includes(e.station))
+    .filter((e) => !favActive || isStarred(e))
+    .filter((e) => sportIds.length === 0 || sportIds.includes(e.sport))
+    .filter((e) => e.status === 'live');
+
+  // Timeline shows the selected day's events, excluding ones that are live now
+  // (they appear in the left panel instead).
   const others = filtered.filter((e) => e.status !== 'live');
 
   // Sort upcoming events chronologically (timeline is now flat — no hour
@@ -474,12 +524,29 @@ function App() {
   const renderEventMeta = (ev) => {
     const sp = sportObj(ev.sport);
     const matchedSubs = ev.subjects.filter((s) => follows.has(s.key));
+    const sessionType = ev.sport === 'f1' ? getSessionType(ev.title, ev.sub) : null;
     return (
       <>
         <div style={ifS.evMeta}>
           <span>{sp.name}</span>
           <span style={{ opacity: 0.5 }}>·</span>
           <span>{ev.comp}</span>
+          {sessionType && (
+            <span style={{
+              padding: '2px 7px', borderRadius: 3, fontSize: 9.5,
+              fontWeight: 800, letterSpacing: '0.16em',
+              background: sessionType === 'Keppni'
+                ? 'rgba(200,255,61,0.14)'
+                : sessionType === 'Tímataka'
+                  ? 'rgba(80,160,255,0.14)'
+                  : 'rgba(180,180,180,0.13)',
+              color: sessionType === 'Keppni'
+                ? (isDark ? '#C8FF3D' : '#5A7A00')
+                : sessionType === 'Tímataka'
+                  ? (isDark ? '#80C0FF' : '#1A60C0')
+                  : pal.muted,
+            }}>{sessionType.toUpperCase()}</span>
+          )}
           {ev.status === 'live' &&
           <span style={{ padding: '2px 7px', background: 'rgba(255,59,71,0.16)',
             color: '#FF3B47', borderRadius: 3, fontSize: 9.5,
@@ -721,6 +788,7 @@ function App() {
           {live.map((ev) => {
             const st = stationObj(ev.station);
             const starred = isStarred(ev);
+            const liveSessionType = ev.sport === 'f1' ? getSessionType(ev.title, ev.sub) : null;
             return (
               <div key={ev.id} style={ifS.liveCard}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -734,6 +802,22 @@ function App() {
                     <SportIcon id={ev.sport} size={18} strokeWidth={1.6} />
                   </div>
                   <div style={ifS.liveTime}>{ev.time} – {ev.endTime}</div>
+                  {liveSessionType && (
+                    <span style={{
+                      marginLeft: 4, padding: '2px 6px', borderRadius: 3,
+                      fontSize: 9, fontWeight: 800, letterSpacing: '0.14em',
+                      background: liveSessionType === 'Keppni'
+                        ? 'rgba(200,255,61,0.14)'
+                        : liveSessionType === 'Tímataka'
+                          ? 'rgba(80,160,255,0.14)'
+                          : 'rgba(180,180,180,0.12)',
+                      color: liveSessionType === 'Keppni'
+                        ? (isDark ? '#C8FF3D' : '#5A7A00')
+                        : liveSessionType === 'Tímataka'
+                          ? (isDark ? '#80C0FF' : '#1A60C0')
+                          : pal.muted,
+                    }}>{liveSessionType.toUpperCase()}</span>
+                  )}
                   <div style={{
                     marginLeft: 'auto', padding: '2px 6px',
                     background: 'rgba(255,59,71,0.18)', color: '#FF3B47',

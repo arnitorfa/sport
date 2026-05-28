@@ -17,9 +17,23 @@ const VIAPLAY_SPORT_MAP = {
   'basketball':         'kb',
   'motorsport':         'f1',
   'motogp':             'f1',
+  'moto2':              'f1',
+  'moto3':              'f1',
+  'motoe':              'f1',
+  'superbike':          'f1',
+  'worldsbk':           'f1',
+  'wsbk':               'f1',
+  'superstock':         'f1',
   'formula-1':          'f1',
   'formula1':           'f1',
+  'formula2':           'f1',
+  'formula3':           'f1',
+  'indycar':            'f1',
+  'nascar':             'f1',
+  'dtm':                'f1',
   'rally':              'f1',
+  'wrc':                'f1',
+  'touring-car':        'f1',
   'tennis':             'tennis',
   'golf':               'golf',
   'mma':                'mma',
@@ -49,15 +63,27 @@ const VIAPLAY_SPORT_MAP = {
   'other':              'fb',
 };
 
-function detectViaplaySport(publicPath, title) {
+// seriesTitle is e.g. "MotoGP", "Moto2", "WorldSBK" — often the only reliable
+// sport signal when content.title is just "Race" or "Qualifying".
+function detectViaplaySport(publicPath, title, seriesTitle) {
   if (publicPath) {
-    const prefix = publicPath.split('/')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
-    if (VIAPLAY_SPORT_MAP[prefix]) return VIAPLAY_SPORT_MAP[prefix];
+    // Check each path segment, not just the first — Viaplay sometimes nests under
+    // a generic "sport" or "motorsport" parent (e.g. "motorsport/moto2/...").
+    const segments = publicPath.split('/');
+    for (const seg of segments) {
+      const key = seg.toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (VIAPLAY_SPORT_MAP[key]) return VIAPLAY_SPORT_MAP[key];
+    }
   }
-  // Fall back to title keyword matching
-  const t = (title || '').toLowerCase();
+  // Combine title + series title for keyword matching.
+  // This catches events whose content.title is generic ("Race", "Qualifying")
+  // but whose seriesTitle is sport-specific ("MotoGP", "WorldSBK", etc.).
+  const t = ((title || '') + ' ' + (seriesTitle || '')).toLowerCase();
+  if (t.includes('moto2') || t.includes('moto3') || t.includes('motoe')) return 'f1';
+  if (t.includes('superbike') || t.includes('worldsbk') || t.includes('wsbk')) return 'f1';
   if (t.includes('formula') || t.includes('grand prix') || t.includes('motogp') ||
-      t.includes('nascar') || t.includes('rally') || t.includes('motorsport')) return 'f1';
+      t.includes('nascar') || t.includes('indycar') || t.includes('rally') ||
+      t.includes('motorsport') || t.includes('mótorsport') || t.includes('dtm')) return 'f1';
   if (t.includes('football') || t.includes('fótbolti') || t.includes('premier league') ||
       t.includes('champions league') || t.includes('bundesliga')) return 'fb';
   if (t.includes('tennis')) return 'tennis';
@@ -123,9 +149,11 @@ function normalizeProduct(product) {
   }
   if (!title) title = content.seriesTitle || 'Íþróttaviðburður';
 
-  const sport = detectViaplaySport(publicPath, title);
+  // Resolve series/format title BEFORE sport detection — it's a key signal
+  // when content.title is a generic session label ("Race", "Qualifying").
   const formatTitle = content.format?.title || content.seriesTitle || '';
   const seasonTitle = content.format?.season?.title || '';
+  const sport = detectViaplaySport(publicPath, title, formatTitle);
   const sub = formatTitle ? `${formatTitle}${seasonTitle ? ' · ' + seasonTitle : ''}` : '';
 
   const images = content.images || {};
