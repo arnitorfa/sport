@@ -1,0 +1,10 @@
+{
+  "functions": {
+    "api/events.js": {
+      "maxDuration": 30
+    }
+  },
+  "rewrites": [
+    { "source": "/api/events", "destination": "/api/events" }
+  ]
+}

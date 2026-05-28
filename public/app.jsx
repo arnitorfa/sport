@@ -1,0 +1,810 @@
+// Main app — Íþróttir framundan v2 (Studio direction, full-bleed)
+
+const { StationLogo, StarPopover, LoginModal, LogoSettings, SportIcon, readLS, writeLS, LS, resolveLogoUrl } = window.IF_COMPS;
+
+// add 'logos' key to LS namespace
+LS.logos = 'if_v2_station_logos';
+
+function App() {
+  const D = window.IF_DATA;
+
+  // ── state ──
+  const [theme, setTheme] = React.useState(() => readLS(LS.theme, 'dark'));
+  const [date, setDate] = React.useState(0);
+  // Multi-select sport filter. Empty set = no sport filter ("Allt" highlighted).
+  // 'fav' lives in the same set and combines AND-style with other sport ids.
+  const [selectedSports, setSelectedSportsRaw] = React.useState(() => new Set());
+  const setSelectedSports = (n) => setSelectedSportsRaw(new Set(n));
+  const [stations, setStations] = React.useState(D.stations.map((s) => s.id));
+  const [search, setSearch] = React.useState('');
+  const [follows, setFollowsRaw] = React.useState(() => new Set(readLS(LS.fav, [
+  't:vikingur-fb-k', 'c:f1-2026', 't:liverpool-fb-k']
+  )));
+  const [popover, setPopover] = React.useState(null); // { eventId, anchor }
+  const [user, setUser] = React.useState(() => readLS(LS.user, null));
+  const [showLogin, setShowLogin] = React.useState(false);
+  const [userMenu, setUserMenu] = React.useState(false);
+  const [logos, setLogos] = React.useState(() => readLS(LS.logos, {}));
+  const [showLogos, setShowLogos] = React.useState(false);
+  const [moreSportsOpen, setMoreSportsOpen] = React.useState(false);
+
+  // ── live event data from backend API ──
+  const [events, setEvents] = React.useState([]);
+  const [loading, setLoading] = React.useState(false);
+  const [fetchError, setFetchError] = React.useState(null);
+
+  React.useEffect(() => {
+    const dateObj = D.dates.find((d) => d.offset === date);
+    if (!dateObj) return;
+    setLoading(true);
+    setFetchError(null);
+    fetch(`/api/events?date=${dateObj.isoDate}`)
+      .then((r) => r.json())
+      .then((data) => {
+        setEvents(data.events || []);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error('Failed to fetch events:', err);
+        setFetchError('Ekki tókst að sækja dagskrá. Reyndu aftur.');
+        setLoading(false);
+      });
+  }, [date]);
+
+  // persist
+  React.useEffect(() => writeLS(LS.theme, theme), [theme]);
+  React.useEffect(() => writeLS(LS.fav, [...follows]), [follows]);
+  React.useEffect(() => writeLS(LS.user, user), [user]);
+  React.useEffect(() => writeLS(LS.logos, logos), [logos]);
+
+  // Keep <body> background in sync with the theme so the side gutters around
+  // the fixed-width 1400px canvas blend in (otherwise the dark default body
+  // would show as black bars on either side of the page in light mode).
+  React.useEffect(() => {
+    const bg = theme === 'dark' ? '#08080A' : '#FFFFFF';
+    document.body.style.background = bg;
+  }, [theme]);
+
+  const setFollows = (next) => setFollowsRaw(new Set(next));
+  const toggleFollow = (key) => {
+    const n = new Set(follows);
+    n.has(key) ? n.delete(key) : n.add(key);
+    setFollows(n);
+  };
+  const toggleStation = (id) => {
+    setStations((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+  };
+  const toggleSport = (id) => {
+    if (id === 'all') { setSelectedSports(new Set()); return; }
+    const next = new Set(selectedSports);
+    next.has(id) ? next.delete(id) : next.add(id);
+    setSelectedSports(next);
+  };
+
+  // helpers
+  const sportObj = (id) => D.sports.find((s) => s.id === id);
+  const stationObj = (id) => D.stations.find((s) => s.id === id);
+  const isStarred = (ev) => ev.subjects.some((s) => follows.has(s.key));
+  const logoFor = (st) => resolveLogoUrl(st, logos[st.id], theme);
+
+  // ── filtering ──
+  // Sport filter: empty = no filter; 'fav' AND-combines with sport ids.
+  const favActive = selectedSports.has('fav');
+  const sportIds = [...selectedSports].filter((s) => s !== 'fav');
+  const filtered = events.
+  filter((e) => stations.includes(e.station)).
+  filter((e) => !favActive || isStarred(e)).
+  filter((e) => sportIds.length === 0 || sportIds.includes(e.sport)).
+  filter((e) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    const hay = [e.title, e.sub, e.comp, ...(e.subjects || []).map((s) => s.label)].join(' ').toLowerCase();
+    return hay.includes(q);
+  });
+
+  const live = filtered.filter((e) => e.status === 'live');
+  const others = filtered.filter((e) => e.status !== 'live');
+
+  // Sort upcoming events chronologically (timeline is now flat — no hour
+  // grouping; each event has its own timestamp + countdown).
+  const upcoming = [...others].sort((a, b) => a.time.localeCompare(b.time));
+
+  // True once the user has at least one custom logo (any theme variant) for
+  // EVERY station. When true we hide the standalone logo-settings button —
+  // it's still reachable through the user menu.
+  const allLogosCustom = D.stations.every((st) => {
+    const v = logos[st.id];
+    if (!v) return false;
+    if (typeof v === 'string') return true;
+    return v.forDark || v.forLight;
+  });
+
+  // ── theme palette (also exposed as CSS vars) ──
+  const isDark = theme === 'dark';
+  const pal = isDark ? {
+    bg: '#08080A', fg: '#F4F4F5', card: '#121215', card2: '#1A1A1E',
+    hair: '#202024', hair2: '#2C2C30', muted: '#7B7B82',
+    accent: '#C8FF3D', accentFg: '#0A0A0B', accentSoft: 'rgba(200,255,61,0.13)',
+    panelBg: '#0B0B0D'
+  } : {
+    bg: '#FFFFFF', fg: '#0A0A0B', card: '#FAFAF8', card2: '#FFFFFF',
+    hair: '#E7E5E1', hair2: '#D8D6D1', muted: '#76736C',
+    accent: '#F26419', accentFg: '#FFFFFF', accentSoft: 'rgba(242,100,25,0.12)',
+    panelBg: '#F5F4F1'
+  };
+
+  const cssVars = {
+    '--if-bg': pal.bg, '--if-fg': pal.fg, '--if-card': pal.card, '--if-card2': pal.card2,
+    '--if-hair': pal.hair, '--if-hair2': pal.hair2, '--if-muted': pal.muted,
+    '--if-accent': pal.accent, '--if-accent-fg': pal.accentFg,
+    '--if-accent-soft': pal.accentSoft, '--if-panel': pal.panelBg
+  };
+
+  // ── styles (scoped via prefix to avoid collisions) ──
+  const ifS = {
+    root: {
+      ...cssVars,
+      minHeight: '100vh', width: '100%', background: pal.bg, color: pal.fg,
+      fontFamily: '"Inter", system-ui, sans-serif', letterSpacing: '-0.005em',
+      display: 'flex', flexDirection: 'column'
+    },
+    topBar: {
+      display: 'flex', alignItems: 'center', gap: 24,
+      padding: '20px 36px', borderBottom: `1px solid ${pal.hair}`
+    },
+    logoWrap: { display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 },
+    logoMark: {
+      width: 38, height: 38, borderRadius: 10, background: pal.accent,
+      color: pal.accentFg, display: 'flex', alignItems: 'center',
+      justifyContent: 'center', fontWeight: 800, fontSize: 16,
+      letterSpacing: '-0.04em', fontFamily: '"JetBrains Mono", monospace'
+    },
+    logoName: { fontSize: 14.5, fontWeight: 700, letterSpacing: '-0.01em', lineHeight: 1.1 },
+    logoTag: {
+      fontSize: 9.5, color: pal.muted, textTransform: 'uppercase',
+      letterSpacing: '0.18em', marginTop: 3, fontWeight: 600
+    },
+
+    searchWrap: {
+      flex: 1, maxWidth: 460, display: 'flex', alignItems: 'center',
+      gap: 10, background: pal.card, border: `1px solid ${pal.hair}`,
+      borderRadius: 10, padding: '9px 14px', marginLeft: 'auto'
+    },
+    searchInput: {
+      flex: 1, border: 'none', outline: 'none', background: 'transparent',
+      color: pal.fg, fontSize: 13, fontFamily: 'inherit'
+    },
+    kbd: {
+      fontFamily: '"JetBrains Mono", monospace', fontSize: 10,
+      color: pal.muted, padding: '2px 6px', border: `1px solid ${pal.hair2}`,
+      borderRadius: 4
+    },
+
+    iconBtn: {
+      width: 38, height: 38, borderRadius: 10, cursor: 'pointer',
+      background: pal.card, border: `1px solid ${pal.hair}`,
+      color: pal.fg, display: 'flex', alignItems: 'center',
+      justifyContent: 'center', flexShrink: 0
+    },
+
+    loginBtn: {
+      display: 'flex', alignItems: 'center', gap: 8,
+      height: 38, padding: '0 14px', borderRadius: 10,
+      background: pal.card, border: `1px solid ${pal.hair}`,
+      color: pal.fg, fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
+      flexShrink: 0, fontFamily: 'inherit'
+    },
+    avatar: {
+      width: 38, height: 38, borderRadius: 99, cursor: 'pointer',
+      background: pal.accent, color: pal.accentFg,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontWeight: 700, fontSize: 14, flexShrink: 0, position: 'relative'
+    },
+
+    // date strip
+    dateStrip: {
+      display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)',
+      borderBottom: `1px solid ${pal.hair}`
+    },
+    dateCell: (active) => ({
+      padding: '14px 10px 12px', cursor: 'pointer',
+      borderRight: `1px solid ${pal.hair}`,
+      background: active ? pal.accent : 'transparent',
+      color: active ? pal.accentFg : pal.fg,
+      transition: 'background .12s'
+    }),
+    dateCellWk: (active) => ({
+      fontSize: 10, textTransform: 'uppercase',
+      letterSpacing: '0.16em', opacity: active ? 0.85 : 0.5,
+      fontWeight: 700
+    }),
+    dateCellD: { fontSize: 22, fontWeight: 700, marginTop: 4,
+      fontFamily: '"JetBrains Mono", monospace',
+      letterSpacing: '-0.02em', lineHeight: 1 },
+    dateCellLbl: (active) => ({
+      fontSize: 9.5, marginTop: 5, fontWeight: 700,
+      textTransform: 'uppercase', letterSpacing: '0.12em',
+      opacity: active ? 0.85 : 0.4
+    }),
+    dateCellCount: (active) => ({
+      fontSize: 9.5, marginTop: 4, opacity: active ? 0.85 : 1,
+      color: active ? pal.accentFg : pal.muted,
+      fontFamily: '"JetBrains Mono", monospace'
+    }),
+
+    // sport filter — grid so secondary chips align under the primary row
+    filterBar: {
+      padding: '14px 28px',
+      display: 'grid',
+      gridTemplateColumns: 'repeat(11, 1fr)',
+      gap: 4, borderBottom: `1px solid ${pal.hair}`
+    },
+    sportChip: (active, isFav) => ({
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      justifyContent: 'flex-start', gap: 8, padding: '12px 10px 10px',
+      borderRadius: 10, cursor: 'pointer',
+      background: active ? pal.fg : 'transparent',
+      color: active ? pal.bg :
+      isFav ? pal.accent : pal.fg,
+      transition: 'background .12s, color .12s',
+      border: 'none', fontFamily: 'inherit',
+      position: 'relative'
+    }),
+    sportChipLabel: (active) => ({
+      fontSize: 11, fontWeight: 700, letterSpacing: '0.10em',
+      textTransform: 'uppercase', textAlign: 'center',
+      lineHeight: 1.1
+    }),
+
+    // station filter
+    stationBar: {
+      padding: '14px 36px', display: 'flex', alignItems: 'center',
+      gap: 8, borderBottom: `1px solid ${pal.hair}`, fontSize: 12,
+      flexWrap: 'wrap'
+    },
+    stationLbl: {
+      fontSize: 9.5, color: pal.muted, textTransform: 'uppercase',
+      letterSpacing: '0.18em', fontWeight: 700, marginRight: 6
+    },
+    stationToggle: (active) => ({
+      cursor: 'pointer', opacity: active ? 1 : 0.32,
+      transition: 'opacity .12s', display: 'flex', alignItems: 'center',
+      padding: 2, borderRadius: 6,
+      background: active ? 'transparent' : 'transparent'
+    }),
+
+    // body
+    body: { flex: 1, display: 'grid', gridTemplateColumns: '340px 1fr', minHeight: 0 },
+
+    livePane: {
+      borderRight: `1px solid ${pal.hair}`,
+      padding: '24px 22px', overflowY: 'auto',
+      background: pal.panelBg
+    },
+    liveHd: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18 },
+    liveDot: {
+      width: 8, height: 8, borderRadius: 99, background: '#FF3B47',
+      boxShadow: '0 0 0 4px rgba(255,59,71,0.22)',
+      animation: 'ifPulse 1.6s infinite'
+    },
+    liveLabel: {
+      fontSize: 11, fontWeight: 800, letterSpacing: '0.24em',
+      textTransform: 'uppercase', color: '#FF3B47'
+    },
+    liveSub: { color: pal.muted, fontSize: 11, marginLeft: 'auto',
+      fontFamily: '"JetBrains Mono", monospace' },
+    liveCard: {
+      padding: '16px', borderRadius: 12, background: pal.card2,
+      border: `1px solid ${pal.hair}`, marginBottom: 10,
+      display: 'flex', flexDirection: 'column', gap: 8, position: 'relative'
+    },
+    liveTime: {
+      fontFamily: '"JetBrains Mono", monospace', fontSize: 11,
+      color: pal.muted, letterSpacing: '0.04em'
+    },
+    liveTitle: { fontSize: 15, fontWeight: 700, lineHeight: 1.2,
+      letterSpacing: '-0.01em' },
+    liveSub2: { fontSize: 12, color: pal.muted, lineHeight: 1.3 },
+
+    timeline: { overflowY: 'auto', padding: '20px 32px 64px' },
+    timelineEmpty: { color: pal.muted, padding: 60, textAlign: 'center',
+      fontSize: 14, lineHeight: 1.5 },
+    sectionHd: {
+      fontSize: 13, fontWeight: 700, textTransform: 'uppercase',
+      letterSpacing: '0.22em', color: pal.muted, marginBottom: 8
+    },
+
+    // Per-event row — timeline is now flat (no hour grouping).
+    // Grid: time (left big) | sport icon | content | countdown + station/star
+    evRow: {
+      display: 'grid',
+      gridTemplateColumns: '110px 64px 1fr auto',
+      gap: 20, alignItems: 'center',
+      padding: '14px 0', borderTop: `1px solid ${pal.hair}`
+    },
+    timeBlock: { textAlign: 'left' },
+    timeBig: {
+      fontFamily: '"JetBrains Mono", monospace',
+      fontSize: 32, fontWeight: 700, lineHeight: 1,
+      letterSpacing: '-0.03em', color: pal.fg
+    },
+    timeEnd: {
+      fontSize: 11, color: pal.muted, marginTop: 6, fontWeight: 600,
+      fontFamily: '"JetBrains Mono", monospace', letterSpacing: '-0.005em'
+    },
+    countdownBig: {
+      fontSize: 22, fontWeight: 700, lineHeight: 1,
+      letterSpacing: '-0.02em', color: pal.fg,
+      fontFamily: '"Inter", sans-serif'
+    },
+
+    hourRow: {
+      display: 'grid', gridTemplateColumns: '110px 1fr',
+      gap: 28, padding: '16px 0', borderTop: `1px solid ${pal.hair}`
+    },
+    hourBig: {
+      fontFamily: '"JetBrains Mono", monospace',
+      fontSize: 48, fontWeight: 700, lineHeight: 1,
+      letterSpacing: '-0.04em'
+    },
+    hourSub: {
+      fontSize: 10, color: pal.muted, marginTop: 4, fontWeight: 700,
+      letterSpacing: '0.16em', textTransform: 'uppercase'
+    },
+    hourCount: {
+      marginTop: 8, fontSize: 10.5, color: pal.muted,
+      fontFamily: '"JetBrains Mono", monospace'
+    },
+
+    evList: { display: 'flex', flexDirection: 'column', gap: 10 },
+    evCard: {
+      display: 'grid', gridTemplateColumns: '64px 1fr auto',
+      gap: 18, alignItems: 'center',
+      padding: '16px 18px', borderRadius: 14,
+      background: pal.card, border: `1px solid ${pal.hair}`,
+      transition: 'border-color .12s, transform .12s'
+    },
+    evIcon: {
+      width: 60, height: 60, borderRadius: 12,
+      background: isDark ? '#1F1F22' : '#FFFFFF',
+      border: `1px solid ${pal.hair2}`,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      color: pal.fg, flexShrink: 0
+    },
+    evMid: { minWidth: 0 },
+    evMeta: {
+      fontSize: 10.5, color: pal.muted, fontWeight: 700,
+      textTransform: 'uppercase', letterSpacing: '0.14em',
+      marginBottom: 4, display: 'flex', alignItems: 'center',
+      gap: 8, flexWrap: 'wrap'
+    },
+    evTitle: { fontSize: 17, fontWeight: 700, lineHeight: 1.2,
+      letterSpacing: '-0.01em' },
+    evSub: { fontSize: 13, color: pal.muted, marginTop: 3 },
+    followLine: {
+      display: 'flex', alignItems: 'center', gap: 6, marginTop: 6,
+      fontSize: 11, color: pal.muted, fontWeight: 600
+    },
+    followPill: {
+      padding: '2px 7px', borderRadius: 4, background: pal.accentSoft,
+      color: pal.fg, fontWeight: 700, fontSize: 10,
+      letterSpacing: '0.04em'
+    },
+
+    evRight: { display: 'flex', flexDirection: 'column',
+      alignItems: 'flex-end', gap: 10 },
+    evTime: {
+      fontFamily: '"JetBrains Mono", monospace',
+      fontSize: 28, fontWeight: 700, lineHeight: 1,
+      letterSpacing: '-0.02em'
+    },
+    evEnd: {
+      fontSize: 11, color: pal.muted, fontWeight: 600,
+      marginTop: 4, letterSpacing: '-0.005em'
+    },
+    evRow2: { display: 'flex', alignItems: 'center', gap: 8 },
+    starBtn: (active) => ({
+      width: 32, height: 32, borderRadius: 9, cursor: 'pointer',
+      background: active ? pal.accent : 'transparent',
+      color: active ? pal.accentFg : pal.muted,
+      border: `1px solid ${active ? pal.accent : pal.hair2}`,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      transition: 'all .12s', flexShrink: 0, fontFamily: 'inherit'
+    })
+  };
+
+  const renderEventMeta = (ev) => {
+    const sp = sportObj(ev.sport);
+    const matchedSubs = ev.subjects.filter((s) => follows.has(s.key));
+    return (
+      <>
+        <div style={ifS.evMeta}>
+          <span>{sp.name}</span>
+          <span style={{ opacity: 0.5 }}>·</span>
+          <span>{ev.comp}</span>
+          {ev.status === 'live' &&
+          <span style={{ padding: '2px 7px', background: 'rgba(255,59,71,0.16)',
+            color: '#FF3B47', borderRadius: 3, fontSize: 9.5,
+            fontWeight: 800, letterSpacing: '0.16em' }}>LIVE</span>
+          }
+        </div>
+        <div style={ifS.evTitle}>{ev.title}</div>
+        <div style={ifS.evSub}>{ev.sub}</div>
+        {matchedSubs.length > 0 &&
+        <div style={ifS.followLine}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill={pal.fg} aria-hidden="true">
+              <path d="M12 2 L14.6 9 L21 9.7 L16.3 14 L17.7 20.5 L12 17 L6.3 20.5 L7.7 14 L3 9.7 L9.4 9 Z" />
+            </svg>
+            <span>Þú fylgir</span>
+            {matchedSubs.slice(0, 2).map((s) =>
+          <span key={s.key} style={ifS.followPill}>{s.label}</span>
+          )}
+            {matchedSubs.length > 2 && <span>+{matchedSubs.length - 2}</span>}
+          </div>
+        }
+      </>);
+
+  };
+
+  const renderSportChip = (sp, extraStyle) => {
+    const active = sp.id === 'all'
+      ? selectedSports.size === 0
+      : selectedSports.has(sp.id);
+    const isFav = sp.id === 'fav';
+    const showCount = isFav && follows.size > 0;
+    return (
+      <button key={sp.id} style={{ ...ifS.sportChip(active, isFav), ...(extraStyle || {}) }}
+              onClick={() => toggleSport(sp.id)}>
+        <div style={{ position: 'relative' }}>
+          <SportIcon id={sp.id} size={34} strokeWidth={1.4} />
+          {showCount && !active && (
+            <span style={{
+              position: 'absolute', top: -6, right: -10,
+              minWidth: 18, height: 18, padding: '0 5px',
+              borderRadius: 99, background: pal.accent,
+              color: pal.accentFg, fontSize: 10, fontWeight: 800,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontFamily: '"JetBrains Mono", monospace'
+            }}>{follows.size}</span>
+          )}
+        </div>
+        <span style={ifS.sportChipLabel(active)}>{sp.name}</span>
+      </button>
+    );
+  };
+
+  return (
+    <div style={ifS.root}>
+      <style>{`
+        @keyframes ifPulse {
+          0% { box-shadow: 0 0 0 0 rgba(255,59,71,0.6); }
+          70% { box-shadow: 0 0 0 10px rgba(255,59,71,0); }
+          100% { box-shadow: 0 0 0 0 rgba(255,59,71,0); }
+        }
+        .if-evcard:hover { border-color: ${pal.hair2} !important; }
+      `}</style>
+
+      {/* ── TOP BAR ── */}
+      <div style={ifS.topBar}>
+        <div style={ifS.logoWrap}>
+          <div style={ifS.logoMark}>ÍF</div>
+          <div>
+            <div style={ifS.logoName}>Íþróttir framundan</div>
+            <div style={ifS.logoTag}>Lifandi · 5 stöðvar · Ísland</div>
+          </div>
+        </div>
+
+        <div style={ifS.searchWrap}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={pal.muted} strokeWidth="2" strokeLinecap="round">
+            <circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" />
+          </svg>
+          <input
+            style={ifS.searchInput}
+            placeholder="Leita að liði, íþrótt, keppni…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)} />
+          
+          <span style={ifS.kbd}>⌘ K</span>
+        </div>
+
+        {/* Theme toggle */}
+        <button style={ifS.iconBtn}
+        onClick={() => setTheme(isDark ? 'light' : 'dark')}
+        aria-label="Skipta um þema">
+          {isDark ?
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="4" />
+              <path d="M12 2v2 M12 20v2 M4.93 4.93l1.41 1.41 M17.66 17.66l1.41 1.41 M2 12h2 M20 12h2 M4.93 19.07l1.41-1.41 M17.66 6.34l1.41-1.41" />
+            </svg> :
+
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+            </svg>
+          }
+        </button>
+
+        {/* Logo settings — hidden once user has uploaded at least one variant
+            for every station. Re-entry stays available via the user menu. */}
+        {!allLogosCustom && (
+          <button style={ifS.iconBtn}
+          onClick={() => setShowLogos(true)}
+          aria-label="Merki stöðvanna"
+          title="Hlaða inn merkjum stöðvanna">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="4" width="18" height="16" rx="2" />
+              <circle cx="9" cy="10" r="1.8" />
+              <path d="M21 16 L15 11 L7 18" />
+            </svg>
+          </button>
+        )}
+
+        {/* Login / user */}
+        {!user ?
+        <button style={ifS.loginBtn} onClick={() => setShowLogin(true)}>
+            <svg width="14" height="14" viewBox="0 0 48 48" aria-hidden="true">
+              <path fill="#4285F4" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6 8-11.3 8a12 12 0 1 1 7.9-21l5.7-5.7A20 20 0 1 0 44 24c0-1.2-.1-2.4-.4-3.5z" />
+              <path fill="#34A853" d="M6.3 14.7l6.6 4.8A12 12 0 0 1 24 12c3 0 5.8 1.1 7.9 3l5.7-5.7A20 20 0 0 0 6.3 14.7z" />
+              <path fill="#FBBC05" d="M24 44a20 20 0 0 0 13.4-5l-6.2-5.2c-1.9 1.3-4.4 2.2-7.2 2.2a12 12 0 0 1-11.3-8l-6.6 5.1A20 20 0 0 0 24 44z" />
+              <path fill="#EA4335" d="M43.6 20.5H42V20H24v8h11.3a12 12 0 0 1-4.1 5.6l6.2 5.2C41.4 35.8 44 30.4 44 24c0-1.2-.1-2.4-.4-3.5z" />
+            </svg>
+            Skrá inn
+          </button> :
+
+        <div style={{ position: 'relative' }}>
+            <div style={ifS.avatar} onClick={() => setUserMenu((m) => !m)}>{user.initial}</div>
+            {userMenu &&
+          <div style={{
+            position: 'absolute', top: 46, right: 0, width: 220,
+            background: pal.card, border: `1px solid ${pal.hair}`,
+            borderRadius: 12, padding: 8, zIndex: 100,
+            boxShadow: '0 12px 40px rgba(0,0,0,0.18)'
+          }}
+          onMouseLeave={() => setUserMenu(false)}>
+                <div style={{ padding: '8px 10px 10px',
+              borderBottom: `1px solid ${pal.hair}` }}>
+                  <div style={{ fontSize: 13, fontWeight: 700 }}>{user.name}</div>
+                  <div style={{ fontSize: 11, color: pal.muted, marginTop: 2 }}>{user.email}</div>
+                </div>
+                <button onClick={() => { setShowLogos(true); setUserMenu(false); }}
+            style={{
+              width: '100%', padding: '8px 10px', borderRadius: 6,
+              border: 'none', background: 'transparent', textAlign: 'left',
+              color: pal.fg, fontSize: 12.5, cursor: 'pointer',
+              fontFamily: 'inherit', marginTop: 4,
+              display: 'flex', alignItems: 'center', gap: 8
+            }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="4" width="18" height="16" rx="2" />
+                    <circle cx="9" cy="10" r="1.6" />
+                    <path d="M21 16 L15 11 L7 18" />
+                  </svg>
+                  Merki stöðvanna
+                </button>
+                <button onClick={() => {setUser(null);setUserMenu(false);}}
+            style={{
+              width: '100%', padding: '8px 10px', borderRadius: 6,
+              border: 'none', background: 'transparent', textAlign: 'left',
+              color: pal.fg, fontSize: 12.5, cursor: 'pointer',
+              fontFamily: 'inherit'
+            }}>Skrá út</button>
+              </div>
+          }
+          </div>
+        }
+      </div>
+
+      {/* ── DATE STRIP ── */}
+      <div style={ifS.dateStrip}>
+        {D.dates.map((d) => {
+          const active = d.offset === date;
+          const cnt = d.offset === date ? events.length : '…';
+          return (
+            <div key={d.offset} style={ifS.dateCell(active)}
+            onClick={() => setDate(d.offset)}>
+              <div style={ifS.dateCellWk(active)}>{d.weekday}</div>
+              <div style={ifS.dateCellD}>{String(d.day).padStart(2, '0')}</div>
+              {d.label ?
+              <div style={ifS.dateCellLbl(active)}>{d.label}</div> :
+              <div style={ifS.dateCellLbl(active)}>&nbsp;</div>}
+              <div style={ifS.dateCellCount(active)}>{cnt} viðb.</div>
+            </div>);
+
+        })}
+      </div>
+
+      {/* ── SPORT FILTER ── */}
+      <div style={ifS.filterBar}>
+        {D.sports.filter((s) => !s.secondary).map((sp) => renderSportChip(sp))}
+        {D.sports.some((s) => s.secondary) && (
+          <button style={{ ...ifS.sportChip(false, false), gridColumn: 'span 2' }}
+                  onClick={() => setMoreSportsOpen((o) => !o)}>
+            <div style={{ position: 'relative' }}>
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                {moreSportsOpen ? (
+                  <path d="M6 14 L12 8 L18 14"/>
+                ) : (
+                  <path d="M6 10 L12 16 L18 10"/>
+                )}
+              </svg>
+            </div>
+            <span style={ifS.sportChipLabel(false)}>
+              {moreSportsOpen ? 'Loka' : 'Fleiri íþróttir'}
+            </span>
+          </button>
+        )}
+        {moreSportsOpen && D.sports.filter((s) => s.secondary).map((sp, i) =>
+          renderSportChip(sp, i === 0 ? { gridColumnStart: 3 } : undefined)
+        )}
+      </div>
+
+      {/* ── STATION FILTER ── */}
+      <div style={ifS.stationBar}>
+        <div style={ifS.stationLbl}>Stöðvar</div>
+        {D.stations.map((st) => {
+          const active = stations.includes(st.id);
+          return (
+            <div key={st.id} style={ifS.stationToggle(active)}
+            onClick={() => toggleStation(st.id)}>
+              <StationLogo station={st} size="sm" logoUrl={logoFor(st)} />
+            </div>);
+
+        })}
+        <div style={{ marginLeft: 'auto', color: pal.muted, fontSize: 11,
+          fontFamily: '"JetBrains Mono", monospace' }}>
+          {filtered.length} viðburðir sýndir
+        </div>
+      </div>
+
+      {/* ── BODY ── */}
+      <div style={ifS.body}>
+        {/* Live rail */}
+        <div style={ifS.livePane}>
+          <div style={ifS.liveHd}>
+            <span style={ifS.liveDot} />
+            <span style={ifS.liveLabel}>Í beinni núna</span>
+            <span style={ifS.liveSub}>{live.length}</span>
+          </div>
+          {live.length === 0 &&
+          <div style={{ color: pal.muted, fontSize: 12, lineHeight: 1.5 }}>
+              Enginn í gangi með þessar síur.
+            </div>
+          }
+          {live.map((ev) => {
+            const st = stationObj(ev.station);
+            const starred = isStarred(ev);
+            return (
+              <div key={ev.id} style={ifS.liveCard}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{
+                    width: 30, height: 30, borderRadius: 8,
+                    background: isDark ? '#1F1F22' : '#FFFFFF',
+                    border: `1px solid ${pal.hair2}`,
+                    display: 'flex', alignItems: 'center',
+                    justifyContent: 'center', color: pal.fg
+                  }}>
+                    <SportIcon id={ev.sport} size={18} strokeWidth={1.6} />
+                  </div>
+                  <div style={ifS.liveTime}>{ev.time} – {ev.endTime}</div>
+                  <div style={{
+                    marginLeft: 'auto', padding: '2px 6px',
+                    background: 'rgba(255,59,71,0.18)', color: '#FF3B47',
+                    fontSize: 9, fontWeight: 800, letterSpacing: '0.16em',
+                    borderRadius: 3
+                  }}>LIVE</div>
+                </div>
+                <div style={ifS.liveTitle}>{ev.title}</div>
+                <div style={ifS.liveSub2}>{ev.sub}</div>
+                <div style={{ display: 'flex', alignItems: 'center',
+                  justifyContent: 'space-between', marginTop: 4 }}>
+                  <StationLogo station={st} size="sm" logoUrl={logoFor(st)} />
+                  <button style={ifS.starBtn(starred)}
+                  onClick={(e) => setPopover({ eventId: ev.id, anchor: e.currentTarget })}>
+                    <svg width="14" height="14" viewBox="0 0 24 24"
+                    fill={starred ? 'currentColor' : 'none'}
+                    stroke="currentColor" strokeWidth="2"
+                    strokeLinecap="round" strokeLinejoin="round">
+                      <polygon points="12 2 15.1 8.6 22 9.3 17 14 18.4 21 12 17.5 5.6 21 7 14 2 9.3 8.9 8.6 12 2" />
+                    </svg>
+                  </button>
+                </div>
+              </div>);
+
+          })}
+        </div>
+
+        {/* Timeline — flat chronological list, one row per event */}
+        <div style={ifS.timeline}>
+          {loading &&
+          <div style={ifS.timelineEmpty}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10 }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={pal.muted} strokeWidth="2">
+                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83">
+                    <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="1s" repeatCount="indefinite"/>
+                  </path>
+                </svg>
+                Sæki dagskrá…
+              </div>
+            </div>
+          }
+          {fetchError &&
+          <div style={{ ...ifS.timelineEmpty, color: '#FF3B47' }}>{fetchError}</div>
+          }
+          {!loading && !fetchError && upcoming.length === 0 &&
+          <div style={ifS.timelineEmpty}>
+              {favActive && filtered.length === 0 ?
+            'Þú átt engin uppáhalds enn. Smelltu á stjörnu hjá viðburði til að bæta við.' :
+            'Engir íþróttaviðburðir fundust á þessum degi.'}
+            </div>
+          }
+          {!loading && upcoming.map((ev) => {
+            const st = stationObj(ev.station);
+            const starred = isStarred(ev);
+            return (
+              <div key={ev.id} className="if-evcard" style={ifS.evRow}>
+                <div style={ifS.timeBlock} data-comment-anchor="ev-time-left">
+                  <div style={ifS.timeBig}>{ev.time}</div>
+                  <div style={ifS.timeEnd}>til {ev.endTime}</div>
+                </div>
+                <div style={ifS.evIcon}>
+                  <SportIcon id={ev.sport} size={32} strokeWidth={1.4} />
+                </div>
+                <div style={ifS.evMid}>{renderEventMeta(ev)}</div>
+                <div style={ifS.evRight}>
+                  <div style={ifS.countdownBig} data-comment-anchor="ev-countdown-right">
+                    {D.countdown(ev.time, ev.status)}
+                  </div>
+                  <div style={ifS.evRow2}>
+                    <StationLogo station={st} size="sm" logoUrl={logoFor(st)} />
+                    <button style={ifS.starBtn(starred)}
+                      onClick={(e) => { e.stopPropagation();
+                        setPopover({ eventId: ev.id, anchor: e.currentTarget }); }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24"
+                        fill={starred ? 'currentColor' : 'none'}
+                        stroke="currentColor" strokeWidth="2"
+                        strokeLinecap="round" strokeLinejoin="round">
+                        <polygon points="12 2 15.1 8.6 22 9.3 17 14 18.4 21 12 17.5 5.6 21 7 14 2 9.3 8.9 8.6 12 2" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>);
+          })}
+        </div>
+      </div>
+
+      {/* Popover */}
+      {popover &&
+      <StarPopover
+        event={events.find((e) => e.id === popover.eventId)}
+        follows={follows}
+        toggleFollow={toggleFollow}
+        anchor={popover.anchor}
+        onClose={() => setPopover(null)} />
+
+      }
+
+      {/* Login modal */}
+      {showLogin &&
+      <LoginModal
+        onClose={() => setShowLogin(false)}
+        onLogin={(u) => {setUser(u);setShowLogin(false);}} />
+
+      }
+
+      {/* Logo settings modal */}
+      {showLogos &&
+      <LogoSettings
+        stations={D.stations}
+        logos={logos}
+        setLogos={setLogos}
+        onClose={() => setShowLogos(false)} />
+
+      }
+    </div>);
+
+}
+
+window.App = App;
