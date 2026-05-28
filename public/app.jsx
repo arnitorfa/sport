@@ -28,10 +28,21 @@ function App() {
   const [showLogos, setShowLogos] = React.useState(false);
   const [moreSportsOpen, setMoreSportsOpen] = React.useState(false);
 
+  // ── responsive: detect mobile ──
+  const [isMobile, setIsMobile] = React.useState(() => window.innerWidth < 768);
+  React.useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
   // ── live event data from backend API ──
   const [events, setEvents] = React.useState([]);
   const [loading, setLoading] = React.useState(false);
   const [fetchError, setFetchError] = React.useState(null);
+
+  // ── event counts for all days in the date strip ──
+  const [dayCounts, setDayCounts] = React.useState({});
 
   React.useEffect(() => {
     const dateObj = D.dates.find((d) => d.offset === date);
@@ -41,7 +52,10 @@ function App() {
     fetch(`/api/events?date=${dateObj.isoDate}`)
       .then((r) => r.json())
       .then((data) => {
-        setEvents(data.events || []);
+        const evs = data.events || [];
+        setEvents(evs);
+        // Update count for the currently-selected day immediately
+        setDayCounts((prev) => ({ ...prev, [dateObj.isoDate]: evs.length }));
         setLoading(false);
       })
       .catch((err) => {
@@ -50,6 +64,22 @@ function App() {
         setLoading(false);
       });
   }, [date]);
+
+  // Prefetch event counts for all other dates in the background
+  React.useEffect(() => {
+    D.dates.forEach((d) => {
+      if (dayCounts[d.isoDate] !== undefined) return; // already known
+      fetch(`/api/events?date=${d.isoDate}`)
+        .then((r) => r.json())
+        .then((data) => {
+          const cnt = (data.events || []).length;
+          setDayCounts((prev) => ({ ...prev, [d.isoDate]: cnt }));
+        })
+        .catch(() => {});
+    });
+  // Run once on mount — intentionally no deps to avoid re-triggering
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // persist
   React.useEffect(() => writeLS(LS.theme, theme), [theme]);
@@ -149,8 +179,9 @@ function App() {
       display: 'flex', flexDirection: 'column'
     },
     topBar: {
-      display: 'flex', alignItems: 'center', gap: 24,
-      padding: '20px 36px', borderBottom: `1px solid ${pal.hair}`
+      display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 24,
+      padding: isMobile ? '12px 16px' : '20px 36px',
+      borderBottom: `1px solid ${pal.hair}`
     },
     logoWrap: { display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 },
     logoMark: {
@@ -166,7 +197,7 @@ function App() {
     },
 
     searchWrap: {
-      flex: 1, maxWidth: 460, display: 'flex', alignItems: 'center',
+      flex: 1, maxWidth: 460, display: isMobile ? 'none' : 'flex', alignItems: 'center',
       gap: 10, background: pal.card, border: `1px solid ${pal.hair}`,
       borderRadius: 10, padding: '9px 14px', marginLeft: 'auto'
     },
@@ -202,38 +233,51 @@ function App() {
     },
 
     // date strip
-    dateStrip: {
+    dateStrip: isMobile ? {
+      display: 'flex', overflowX: 'auto', overflowY: 'hidden',
+      borderBottom: `1px solid ${pal.hair}`,
+      scrollbarWidth: 'none', msOverflowStyle: 'none',
+    } : {
       display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)',
       borderBottom: `1px solid ${pal.hair}`
     },
     dateCell: (active) => ({
-      padding: '14px 10px 12px', cursor: 'pointer',
+      padding: isMobile ? '10px 8px 8px' : '14px 10px 12px',
+      minWidth: isMobile ? 58 : undefined,
+      flexShrink: 0,
+      cursor: 'pointer',
       borderRight: `1px solid ${pal.hair}`,
       background: active ? pal.accent : 'transparent',
       color: active ? pal.accentFg : pal.fg,
       transition: 'background .12s'
     }),
     dateCellWk: (active) => ({
-      fontSize: 10, textTransform: 'uppercase',
-      letterSpacing: '0.16em', opacity: active ? 0.85 : 0.5,
+      fontSize: isMobile ? 8.5 : 10, textTransform: 'uppercase',
+      letterSpacing: '0.14em', opacity: active ? 0.85 : 0.5,
       fontWeight: 700
     }),
-    dateCellD: { fontSize: 22, fontWeight: 700, marginTop: 4,
+    dateCellD: { fontSize: isMobile ? 18 : 22, fontWeight: 700, marginTop: 3,
       fontFamily: '"JetBrains Mono", monospace',
       letterSpacing: '-0.02em', lineHeight: 1 },
     dateCellLbl: (active) => ({
-      fontSize: 9.5, marginTop: 5, fontWeight: 700,
-      textTransform: 'uppercase', letterSpacing: '0.12em',
+      fontSize: 9, marginTop: isMobile ? 3 : 5, fontWeight: 700,
+      textTransform: 'uppercase', letterSpacing: '0.10em',
       opacity: active ? 0.85 : 0.4
     }),
     dateCellCount: (active) => ({
-      fontSize: 9.5, marginTop: 4, opacity: active ? 0.85 : 1,
+      fontSize: 9, marginTop: 3, opacity: active ? 0.85 : 1,
       color: active ? pal.accentFg : pal.muted,
-      fontFamily: '"JetBrains Mono", monospace'
+      fontFamily: '"JetBrains Mono", monospace',
+      display: isMobile ? 'none' : undefined,
     }),
 
-    // sport filter — grid so secondary chips align under the primary row
-    filterBar: {
+    // sport filter
+    filterBar: isMobile ? {
+      padding: '8px 12px',
+      display: 'flex', overflowX: 'auto', overflowY: 'hidden',
+      gap: 4, borderBottom: `1px solid ${pal.hair}`,
+      scrollbarWidth: 'none', msOverflowStyle: 'none',
+    } : {
       padding: '14px 28px',
       display: 'grid',
       gridTemplateColumns: 'repeat(11, 1fr)',
@@ -241,7 +285,9 @@ function App() {
     },
     sportChip: (active, isFav) => ({
       display: 'flex', flexDirection: 'column', alignItems: 'center',
-      justifyContent: 'flex-start', gap: 8, padding: '12px 10px 10px',
+      justifyContent: 'flex-start', gap: isMobile ? 4 : 8,
+      padding: isMobile ? '8px 10px 6px' : '12px 10px 10px',
+      minWidth: isMobile ? 56 : undefined, flexShrink: isMobile ? 0 : undefined,
       borderRadius: 10, cursor: 'pointer',
       background: active ? pal.fg : 'transparent',
       color: active ? pal.bg :
@@ -258,7 +304,8 @@ function App() {
 
     // station filter
     stationBar: {
-      padding: '14px 36px', display: 'flex', alignItems: 'center',
+      padding: isMobile ? '10px 14px' : '14px 36px',
+      display: 'flex', alignItems: 'center',
       gap: 8, borderBottom: `1px solid ${pal.hair}`, fontSize: 12,
       flexWrap: 'wrap'
     },
@@ -274,11 +321,15 @@ function App() {
     }),
 
     // body
-    body: { flex: 1, display: 'grid', gridTemplateColumns: '340px 1fr', minHeight: 0 },
+    body: isMobile
+      ? { flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }
+      : { flex: 1, display: 'grid', gridTemplateColumns: '340px 1fr', minHeight: 0 },
 
     livePane: {
-      borderRight: `1px solid ${pal.hair}`,
-      padding: '24px 22px', overflowY: 'auto',
+      borderRight: isMobile ? 'none' : `1px solid ${pal.hair}`,
+      borderBottom: isMobile ? `1px solid ${pal.hair}` : 'none',
+      padding: isMobile ? '14px 14px' : '24px 22px',
+      overflowY: isMobile ? 'visible' : 'auto',
       background: pal.panelBg
     },
     liveHd: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18 },
@@ -306,7 +357,7 @@ function App() {
       letterSpacing: '-0.01em' },
     liveSub2: { fontSize: 12, color: pal.muted, lineHeight: 1.3 },
 
-    timeline: { overflowY: 'auto', padding: '20px 32px 64px' },
+    timeline: { overflowY: 'auto', padding: isMobile ? '12px 12px 64px' : '20px 32px 64px', flex: isMobile ? '1 1 auto' : undefined },
     timelineEmpty: { color: pal.muted, padding: 60, textAlign: 'center',
       fontSize: 14, lineHeight: 1.5 },
     sectionHd: {
@@ -316,7 +367,12 @@ function App() {
 
     // Per-event row — timeline is now flat (no hour grouping).
     // Grid: time (left big) | sport icon | content | countdown + station/star
-    evRow: {
+    evRow: isMobile ? {
+      display: 'grid',
+      gridTemplateColumns: '72px 40px 1fr auto',
+      gap: 10, alignItems: 'center',
+      padding: '10px 0', borderTop: `1px solid ${pal.hair}`
+    } : {
       display: 'grid',
       gridTemplateColumns: '110px 64px 1fr auto',
       gap: 20, alignItems: 'center',
@@ -325,15 +381,15 @@ function App() {
     timeBlock: { textAlign: 'left' },
     timeBig: {
       fontFamily: '"JetBrains Mono", monospace',
-      fontSize: 32, fontWeight: 700, lineHeight: 1,
+      fontSize: isMobile ? 20 : 32, fontWeight: 700, lineHeight: 1,
       letterSpacing: '-0.03em', color: pal.fg
     },
     timeEnd: {
-      fontSize: 11, color: pal.muted, marginTop: 6, fontWeight: 600,
+      fontSize: isMobile ? 9.5 : 11, color: pal.muted, marginTop: isMobile ? 3 : 6, fontWeight: 600,
       fontFamily: '"JetBrains Mono", monospace', letterSpacing: '-0.005em'
     },
     countdownBig: {
-      fontSize: 22, fontWeight: 700, lineHeight: 1,
+      fontSize: isMobile ? 13 : 22, fontWeight: 700, lineHeight: 1,
       letterSpacing: '-0.02em', color: pal.fg,
       fontFamily: '"Inter", sans-serif'
     },
@@ -365,7 +421,8 @@ function App() {
       transition: 'border-color .12s, transform .12s'
     },
     evIcon: {
-      width: 60, height: 60, borderRadius: 12,
+      width: isMobile ? 36 : 60, height: isMobile ? 36 : 60,
+      borderRadius: isMobile ? 8 : 12,
       background: isDark ? '#1F1F22' : '#FFFFFF',
       border: `1px solid ${pal.hair2}`,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -375,12 +432,12 @@ function App() {
     evMeta: {
       fontSize: 10.5, color: pal.muted, fontWeight: 700,
       textTransform: 'uppercase', letterSpacing: '0.14em',
-      marginBottom: 4, display: 'flex', alignItems: 'center',
+      marginBottom: 4, display: isMobile ? 'none' : 'flex', alignItems: 'center',
       gap: 8, flexWrap: 'wrap'
     },
-    evTitle: { fontSize: 17, fontWeight: 700, lineHeight: 1.2,
+    evTitle: { fontSize: isMobile ? 13 : 17, fontWeight: 700, lineHeight: 1.2,
       letterSpacing: '-0.01em' },
-    evSub: { fontSize: 13, color: pal.muted, marginTop: 3 },
+    evSub: { fontSize: isMobile ? 11 : 13, color: pal.muted, marginTop: 3 },
     followLine: {
       display: 'flex', alignItems: 'center', gap: 6, marginTop: 6,
       fontSize: 11, color: pal.muted, fontWeight: 600
@@ -395,12 +452,13 @@ function App() {
       alignItems: 'flex-end', gap: 10 },
     evTime: {
       fontFamily: '"JetBrains Mono", monospace',
-      fontSize: 28, fontWeight: 700, lineHeight: 1,
+      fontSize: isMobile ? 16 : 28, fontWeight: 700, lineHeight: 1,
       letterSpacing: '-0.02em'
     },
     evEnd: {
       fontSize: 11, color: pal.muted, fontWeight: 600,
-      marginTop: 4, letterSpacing: '-0.005em'
+      marginTop: 4, letterSpacing: '-0.005em',
+      display: isMobile ? 'none' : undefined,
     },
     evRow2: { display: 'flex', alignItems: 'center', gap: 8 },
     starBtn: (active) => ({
@@ -456,7 +514,7 @@ function App() {
       <button key={sp.id} style={{ ...ifS.sportChip(active, isFav), ...(extraStyle || {}) }}
               onClick={() => toggleSport(sp.id)}>
         <div style={{ position: 'relative' }}>
-          <SportIcon id={sp.id} size={34} strokeWidth={1.4} />
+          <SportIcon id={sp.id} size={isMobile ? 24 : 34} strokeWidth={1.4} />
           {showCount && !active && (
             <span style={{
               position: 'absolute', top: -6, right: -10,
@@ -523,21 +581,7 @@ function App() {
           }
         </button>
 
-        {/* Logo settings — hidden once user has uploaded at least one variant
-            for every station. Re-entry stays available via the user menu. */}
-        {!allLogosCustom && (
-          <button style={ifS.iconBtn}
-          onClick={() => setShowLogos(true)}
-          aria-label="Merki stöðvanna"
-          title="Hlaða inn merkjum stöðvanna">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="4" width="18" height="16" rx="2" />
-              <circle cx="9" cy="10" r="1.8" />
-              <path d="M21 16 L15 11 L7 18" />
-            </svg>
-          </button>
-        )}
+        {/* Logo settings accessible only from user menu — no top-bar button */}
 
         {/* Login / user */}
         {!user ?
@@ -599,7 +643,7 @@ function App() {
       <div style={ifS.dateStrip}>
         {D.dates.map((d) => {
           const active = d.offset === date;
-          const cnt = d.offset === date ? events.length : '…';
+          const cnt = dayCounts[d.isoDate] !== undefined ? dayCounts[d.isoDate] : '·';
           return (
             <div key={d.offset} style={ifS.dateCell(active)}
             onClick={() => setDate(d.offset)}>
@@ -618,7 +662,7 @@ function App() {
       <div style={ifS.filterBar}>
         {D.sports.filter((s) => !s.secondary).map((sp) => renderSportChip(sp))}
         {D.sports.some((s) => s.secondary) && (
-          <button style={{ ...ifS.sportChip(false, false), gridColumn: 'span 2' }}
+          <button style={{ ...ifS.sportChip(false, false), ...(isMobile ? {} : { gridColumn: 'span 2' }) }}
                   onClick={() => setMoreSportsOpen((o) => !o)}>
             <div style={{ position: 'relative' }}>
               <svg width="34" height="34" viewBox="0 0 24 24" fill="none"
@@ -636,7 +680,7 @@ function App() {
           </button>
         )}
         {moreSportsOpen && D.sports.filter((s) => s.secondary).map((sp, i) =>
-          renderSportChip(sp, i === 0 ? { gridColumnStart: 3 } : undefined)
+          renderSportChip(sp, (!isMobile && i === 0) ? { gridColumnStart: 3 } : undefined)
         )}
       </div>
 
@@ -648,14 +692,16 @@ function App() {
           return (
             <div key={st.id} style={ifS.stationToggle(active)}
             onClick={() => toggleStation(st.id)}>
-              <StationLogo station={st} size="sm" logoUrl={logoFor(st)} />
+              <StationLogo station={st} size="sm" logoUrl={logoFor(st)} isDark={isDark} />
             </div>);
 
         })}
-        <div style={{ marginLeft: 'auto', color: pal.muted, fontSize: 11,
-          fontFamily: '"JetBrains Mono", monospace' }}>
-          {filtered.length} viðburðir sýndir
-        </div>
+        {!isMobile && (
+          <div style={{ marginLeft: 'auto', color: pal.muted, fontSize: 11,
+            fontFamily: '"JetBrains Mono", monospace' }}>
+            {filtered.length} viðburðir sýndir
+          </div>
+        )}
       </div>
 
       {/* ── BODY ── */}
@@ -699,7 +745,7 @@ function App() {
                 <div style={ifS.liveSub2}>{ev.sub}</div>
                 <div style={{ display: 'flex', alignItems: 'center',
                   justifyContent: 'space-between', marginTop: 4 }}>
-                  <StationLogo station={st} size="sm" logoUrl={logoFor(st)} />
+                  <StationLogo station={st} size="sm" logoUrl={logoFor(st)} isDark={isDark} />
                   <button style={ifS.starBtn(starred)}
                   onClick={(e) => setPopover({ eventId: ev.id, anchor: e.currentTarget })}>
                     <svg width="14" height="14" viewBox="0 0 24 24"
@@ -749,7 +795,7 @@ function App() {
                   <div style={ifS.timeEnd}>til {ev.endTime}</div>
                 </div>
                 <div style={ifS.evIcon}>
-                  <SportIcon id={ev.sport} size={32} strokeWidth={1.4} />
+                  <SportIcon id={ev.sport} size={isMobile ? 20 : 32} strokeWidth={1.4} />
                 </div>
                 <div style={ifS.evMid}>{renderEventMeta(ev)}</div>
                 <div style={ifS.evRight}>
@@ -757,7 +803,15 @@ function App() {
                     {D.countdown(ev.time, ev.status)}
                   </div>
                   <div style={ifS.evRow2}>
-                    <StationLogo station={st} size="sm" logoUrl={logoFor(st)} />
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+                      <StationLogo station={st} size="sm" logoUrl={logoFor(st)} isDark={isDark} />
+                      {ev.channelName && (
+                        <div style={{ fontSize: 9, color: pal.muted, fontWeight: 600,
+                          letterSpacing: '0.06em', textAlign: 'right', lineHeight: 1 }}>
+                          {ev.channelName}
+                        </div>
+                      )}
+                    </div>
                     <button style={ifS.starBtn(starred)}
                       onClick={(e) => { e.stopPropagation();
                         setPopover({ eventId: ev.id, anchor: e.currentTarget }); }}>

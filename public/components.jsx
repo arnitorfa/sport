@@ -35,7 +35,7 @@ function resolveLogoUrl(station, userEntry, theme) {
 // If a `logoUrl` (resolved image URL) is provided, render the actual image.
 // Otherwise fall back to the styled wordmark badge so the prototype still
 // reads at a glance.
-function StationLogo({ station, size = 'sm', logoUrl }) {
+function StationLogo({ station, size = 'sm', logoUrl, isDark = false }) {
   const dims = size === 'lg'
     ? { h: 32, padX: 14, font: 13, imgH: 26 }
     : { h: 22, padX: 9,  font: 10.5, imgH: 18 };
@@ -43,6 +43,9 @@ function StationLogo({ station, size = 'sm', logoUrl }) {
   // Real logo path — transparent container, image fills.
   if (logoUrl) {
     const scale = station.logoScale || 1;
+    // Default logos are black SVGs. Invert to white on dark backgrounds.
+    // User-uploaded logos (data: URLs) keep their original colours.
+    const needsInvert = isDark && !logoUrl.startsWith('data:');
     return (
       <span style={{
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -51,7 +54,8 @@ function StationLogo({ station, size = 'sm', logoUrl }) {
       }}>
         <img src={logoUrl} alt={station.name}
              style={{ height: dims.imgH * scale, maxWidth: 90,
-                      objectFit: 'contain', display: 'block' }} />
+                      objectFit: 'contain', display: 'block',
+                      filter: needsInvert ? 'invert(1) brightness(2)' : 'none' }} />
       </span>
     );
   }

@@ -1,11 +1,11 @@
 // Fetches sports schedule from Sýn's public EPG API.
 // Endpoint: https://www.syn.is/api/epg/{channel}/{date}
-// No authentication required — these are public Next.js API routes on syn.is.
-// Note: Sýn Sport and Síminn Sport show the same channels; this fetcher covers both.
+// No authentication required.
+// Only returns live broadcasts (beint === 1).
+// Note: Sýn Sport and Síminn Sport show the same channels — this fetcher covers both.
 
 const EPG_BASE = 'https://www.syn.is/api/epg';
 
-// Sports-only channels on the Sýn platform.
 const SPORT_CHANNELS = [
   'synsport', 'synsport2', 'synsport3', 'synsport4',
   'synsportisland', 'synsportisland2', 'synsportisland3',
@@ -13,10 +13,24 @@ const SPORT_CHANNELS = [
   'synsportviaplay',
 ];
 
-// KKI TV channels — dedicated basketball (Körfubolti Ísland) channels
 const KKI_CHANNELS = ['kkitv1', 'kkitv2', 'kkitv3', 'kkitv4', 'kkitv5', 'kkitv6'];
 
-// Map Sýn's "flokkur" comma-separated category to our sport IDs
+// Readable channel display names
+const CHANNEL_DISPLAY = {
+  synsport:         'Sýn Sport',
+  synsport2:        'Sýn Sport 2',
+  synsport3:        'Sýn Sport 3',
+  synsport4:        'Sýn Sport 4',
+  synsportisland:   'Sýn Sport Ísland',
+  synsportisland2:  'Sýn Sport Ísland 2',
+  synsportisland3:  'Sýn Sport Ísland 3',
+  synsportisland4:  'Sýn Sport Ísland 4',
+  synsportisland5:  'Sýn Sport Ísland 5',
+  synsportviaplay:  'Sýn Sport Viaplay',
+  kkitv1: 'KKÍ TV 1', kkitv2: 'KKÍ TV 2', kkitv3: 'KKÍ TV 3',
+  kkitv4: 'KKÍ TV 4', kkitv5: 'KKÍ TV 5', kkitv6: 'KKÍ TV 6',
+};
+
 function detectSport(flokkur, title) {
   const text = ((flokkur || '') + ' ' + (title || '')).toLowerCase();
 
@@ -34,8 +48,7 @@ function detectSport(flokkur, title) {
   if (text.includes('golf')) return 'golf';
 
   if (text.includes('tennis') || text.includes('wimbledon') ||
-      text.includes('roland garros') || text.includes('us open') ||
-      text.includes('australian open') || text.includes('atp') ||
+      text.includes('roland garros') || text.includes('atp') ||
       text.includes('wta'))
     return 'tennis';
 
@@ -45,11 +58,15 @@ function detectSport(flokkur, title) {
 
   if (text.includes('handball') || text.includes('handbolti')) return 'hb';
 
-  if (text.includes('hockey') || text.includes('íshokkí') || text.includes('nhl')) return 'hockey';
+  if (text.includes('hockey') || text.includes('íshokkí') || text.includes('nhl') ||
+      text.includes('khl'))
+    return 'hockey';
 
   if (text.includes('formula') || text.includes(' f1') ||
       text.includes('grand prix') || text.includes('motogp') ||
-      text.includes('indycar'))
+      text.includes('indycar') || text.includes('mótorsport') ||
+      text.includes('motorsport') || text.includes('nascar') ||
+      text.includes('rally') || text.includes('wrc') || text.includes('superbike'))
     return 'f1';
 
   if (text.includes('mma') || text.includes('ufc') ||
@@ -63,13 +80,31 @@ function detectSport(flokkur, title) {
 
   if (text.includes('snooker') || text.includes('snóker')) return 'snooker';
 
-  return 'fb'; // default to football icon for unrecognised sports
+  if (text.includes('baseball') || text.includes('hafnabolti') || text.includes('mlb')) return 'baseball';
+
+  if (text.includes('darts') || text.includes('pílukast')) return 'darts';
+
+  if (text.includes('biljard') || text.includes('billiards')) return 'pool';
+
+  if (text.includes('fimleikar') || text.includes('gymnastics') ||
+      text.includes('þyngdarlyft') || text.includes('weightlifting')) return 'gym';
+
+  if (text.includes('hjólreiðar') || text.includes('cycling') ||
+      text.includes('tour de france') || text.includes('giro') ||
+      text.includes('vuelta')) return 'cycling';
+
+  if (text.includes('frjálsar íþróttir') || text.includes('athletics') ||
+      text.includes('maraþon') || text.includes('marathon')) return 'athletics';
+
+  if (text.includes('rugby') || text.includes('nfl') ||
+      text.includes('american football') || text.includes('six nations')) return 'rugby';
+
+  return 'fb'; // default
 }
 
 function buildSubjects(ev, sport) {
   const subjects = [];
   const matchTitle = ev.isltitill || ev.undirtitill || '';
-  // "Team A - Team B" → extract both teams
   const vsMatch = matchTitle.match(/^(.+?)\s*[-–—]\s*(.+)$/);
   if (vsMatch) {
     for (const name of [vsMatch[1].trim(), vsMatch[2].trim()]) {
@@ -87,12 +122,15 @@ function buildSubjects(ev, sport) {
 function normalizeEvent(ev, channel, isKki = false) {
   if (!ev.upphaf) return null;
 
+  // ── Live-only filter ──────────────────────────────────────────────────────
+  // beint === 1 means this is a live broadcast; skip recordings/reruns.
+  if (ev.beint !== 1) return null;
+
   const start = new Date(ev.upphaf);
   const now = new Date();
-  // slott = duration in minutes
   const end = ev.slott
     ? new Date(start.getTime() + ev.slott * 60 * 1000)
-    : new Date(start.getTime() + 90 * 60 * 1000); // fallback 90 min
+    : new Date(start.getTime() + 90 * 60 * 1000);
 
   let status = 'upcoming';
   if (start <= now && now < end) status = 'live';
@@ -107,10 +145,11 @@ function normalizeEvent(ev, channel, isKki = false) {
 
   const sport = isKki ? 'kb' : detectSport(ev.flokkur, ev.titill);
 
-  // Use isltitill as the main display title (it's usually the match title)
   const matchTitle = ev.isltitill || ev.undirtitill || ev.titill || '';
   const compTitle = (ev.isltitill && ev.titill && ev.isltitill !== ev.titill)
     ? ev.titill : '';
+
+  const channelName = CHANNEL_DISPLAY[channel] || ev.midill_heiti || channel;
 
   return {
     id: `syn-${channel}-${ev.seria || ''}-${ev.thattur || ''}-${start.getTime()}`,
@@ -120,15 +159,15 @@ function normalizeEvent(ev, channel, isKki = false) {
     endIso: end.toISOString(),
     sport,
     station: 'syn',
+    channelName,
     title: matchTitle,
     sub: compTitle,
     comp: compTitle,
     status,
-    live: ev.beint === 1,
+    live: true,
     subjects: buildSubjects(ev, sport),
     image: null,
     sourceUrl: 'https://www.syn.is/sjonvarp/dagskra',
-    channelName: ev.midill_heiti || channel,
   };
 }
 
@@ -149,8 +188,7 @@ export async function fetchSynSchedule(date, fetch) {
         const events = await resp.json();
         if (!Array.isArray(events)) return;
         const isKki = channel.startsWith('kkitv');
-        // The API returns a full month from the given date — filter to the
-        // exact requested date using the dagsetning (YYYY-MM-DDT00:00:00Z) field.
+        // API returns a full month — filter to the requested date
         const filtered = events.filter(ev => (ev.dagsetning || '').slice(0, 10) === dateStr);
         console.log(`Sýn ${channel}: ${filtered.length}/${events.length} events on ${dateStr}`);
         for (const ev of filtered) {
@@ -172,6 +210,6 @@ export async function fetchSynSchedule(date, fetch) {
     return true;
   });
 
-  console.log(`Sýn sports events: ${unique.length} (deduped from ${allEvents.length})`);
+  console.log(`Sýn live sports events: ${unique.length} (deduped from ${allEvents.length})`);
   return unique;
 }

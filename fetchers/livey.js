@@ -11,18 +11,34 @@ const API_BASE = 'https://fa10kh9q05.execute-api.eu-north-1.amazonaws.com/prod';
 
 // Map Lívey's subCategory to our sport IDs
 const SUB_CATEGORY_MAP = {
-  football:    'fb',
-  soccer:      'fb',
-  basketball:  'kb',
-  handball:    'hb',
-  tennis:      'tennis',
-  golf:        'golf',
-  hockey:      'hockey',
-  'ice hockey': 'hockey',
-  mma:         'mma',
-  boxing:      'mma',
-  cycling:     'ski',
-  athletics:   'ski',
+  football:           'fb',
+  soccer:             'fb',
+  basketball:         'kb',
+  handball:           'hb',
+  tennis:             'tennis',
+  golf:               'golf',
+  hockey:             'hockey',
+  'ice hockey':       'hockey',
+  mma:                'mma',
+  boxing:             'mma',
+  wrestling:          'mma',
+  cycling:            'cycling',
+  athletics:          'athletics',
+  'track and field':  'athletics',
+  baseball:           'baseball',
+  softball:           'baseball',
+  darts:              'darts',
+  snooker:            'snooker',
+  billiards:          'pool',
+  pool:               'pool',
+  gymnastics:         'gym',
+  weightlifting:      'gym',
+  rugby:              'rugby',
+  'american football':'rugby',
+  motorsport:         'f1',
+  rally:              'f1',
+  skiing:             'ski',
+  biathlon:           'ski',
 };
 
 function detectSport(category, subCategory, title) {
@@ -40,8 +56,18 @@ function detectSport(category, subCategory, title) {
   if (text.includes('handbolti') || text.includes('handball')) return 'hb';
   if (text.includes('tennis')) return 'tennis';
   if (text.includes('golf')) return 'golf';
-  if (text.includes('hockey') || text.includes('íshokkí')) return 'hockey';
-  if (text.includes('mma') || text.includes('ufc') || text.includes('boxing')) return 'mma';
+  if (text.includes('hockey') || text.includes('íshokkí') || text.includes('nhl')) return 'hockey';
+  if (text.includes('mma') || text.includes('ufc') || text.includes('boxing') || text.includes('wrestling')) return 'mma';
+  if (text.includes('formula') || text.includes('grand prix') || text.includes('motogp') ||
+      text.includes('motorsport') || text.includes('rally') || text.includes('nascar')) return 'f1';
+  if (text.includes('snooker')) return 'snooker';
+  if (text.includes('darts') || text.includes('pílukast')) return 'darts';
+  if (text.includes('baseball') || text.includes('hafnabolti')) return 'baseball';
+  if (text.includes('biljard') || text.includes('billiards')) return 'pool';
+  if (text.includes('fimleikar') || text.includes('gymnastics') || text.includes('weightlifting')) return 'gym';
+  if (text.includes('cycling') || text.includes('hjólreiðar') || text.includes('tour de france')) return 'cycling';
+  if (text.includes('athletics') || text.includes('frjálsar íþróttir') || text.includes('marathon')) return 'athletics';
+  if (text.includes('rugby') || text.includes('nfl')) return 'rugby';
   return 'fb'; // default
 }
 
