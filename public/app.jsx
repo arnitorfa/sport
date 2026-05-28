@@ -307,12 +307,8 @@ function App() {
   // (with their LIVE badge). They also appear in the sidebar live panel.
   const others = filtered;
 
-  // Sort: live events first (with their badge), then chronologically.
-  const upcoming = [...others].sort((a, b) => {
-    if (a.status === 'live' && b.status !== 'live') return -1;
-    if (b.status === 'live' && a.status !== 'live') return 1;
-    return a.time.localeCompare(b.time);
-  });
+  // Pure chronological order — live events appear in their natural time slot.
+  const upcoming = [...others].sort((a, b) => a.time.localeCompare(b.time));
 
   // True once the user has at least one custom logo (any theme variant) for
   // EVERY station. When true we hide the standalone logo-settings button —
@@ -987,8 +983,9 @@ function App() {
             const renderEvRow = (ev) => {
               const st = stationObj(ev.station);
               const starred = isStarred(ev);
+              const isDone = ev.status === 'done';
               return (
-                <div key={ev.id} className="if-evcard" style={ifS.evRow}>
+                <div key={ev.id} className="if-evcard" style={{ ...ifS.evRow, opacity: isDone ? 0.38 : 1 }}>
                   <div style={ifS.timeBlock}>
                     <div style={ifS.timeBig}>{ev.time}</div>
                     <div style={ifS.timeEnd}>til {ev.endTime}</div>
