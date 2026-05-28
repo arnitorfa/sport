@@ -319,8 +319,12 @@ function App() {
   // (with their LIVE badge). They also appear in the sidebar live panel.
   const others = filtered;
 
-  // Pure chronological order — live events appear in their natural time slot.
-  const upcoming = [...others].sort((a, b) => a.time.localeCompare(b.time));
+  // Active events (live + upcoming) shown at top, done events in a separate
+  // "Liðnir atburðir" section below — both sorted chronologically.
+  const upcoming = [...others.filter((e) => e.status !== 'done')]
+    .sort((a, b) => a.time.localeCompare(b.time));
+  const doneEvents = [...others.filter((e) => e.status === 'done')]
+    .sort((a, b) => a.time.localeCompare(b.time));
 
   // True once the user has at least one custom logo (any theme variant) for
   // EVERY station. When true we hide the standalone logo-settings button —
@@ -1089,7 +1093,7 @@ function App() {
                 {fetchError && (
                   <div style={{ ...ifS.timelineEmpty, color: '#FF3B47' }}>{fetchError}</div>
                 )}
-                {!loading && !fetchError && upcoming.length === 0 && (
+                {!loading && !fetchError && upcoming.length === 0 && doneEvents.length === 0 && (
                   <div style={ifS.timelineEmpty}>
                     {favActive && filtered.length === 0
                       ? 'Þú átt engin uppáhalds enn. Smelltu á stjörnu hjá viðburði til að bæta við.'
@@ -1097,6 +1101,26 @@ function App() {
                   </div>
                 )}
                 {!loading && upcoming.map(renderEvRow)}
+                {!loading && doneEvents.length > 0 && (
+                  <>
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      padding: '20px 0 6px',
+                      borderTop: `1px solid ${pal.hair}`,
+                      marginTop: upcoming.length > 0 ? 8 : 0,
+                    }}>
+                      <span style={{
+                        fontSize: 10, fontWeight: 800, letterSpacing: '0.22em',
+                        textTransform: 'uppercase', color: pal.muted,
+                      }}>Liðnir atburðir</span>
+                      <span style={{ fontSize: 10.5, color: pal.muted,
+                        fontFamily: '"JetBrains Mono", monospace' }}>
+                        {doneEvents.length}
+                      </span>
+                    </div>
+                    {doneEvents.map(renderEvRow)}
+                  </>
+                )}
               </>
             );
           })()}

@@ -3,7 +3,7 @@
 // Fetches live data from /api/events — same backend as the desktop app.
 // Shares data.js and components.jsx with the desktop layout.
 
-const { StationLogo, SportIcon, resolveLogoUrl, readLS, writeLS, LS } = window.IF_COMPS;
+const { StationLogo, SportIcon, LoginModal, resolveLogoUrl, readLS, writeLS, LS } = window.IF_COMPS;
 
 function MobileApp({ dark, onThemeChange }) {
   const D = window.IF_DATA;
@@ -16,6 +16,8 @@ function MobileApp({ dark, onThemeChange }) {
   const [stations, setStations] = React.useState(D.stations.map((s) => s.id));
   const [follows, setFollowsRaw] = React.useState(() => new Set(readLS(LS.fav, [])));
   const [logos] = React.useState(() => readLS(LS.logos, {}));
+  const [user, setUser] = React.useState(() => readLS(LS.user, null));
+  const [showLogin, setShowLogin] = React.useState(false);
   const [sportPickerOpen, setSportPickerOpen] = React.useState(false);
   const [datePickerOpen, setDatePickerOpen] = React.useState(false);
   const [starSheetFor, setStarSheetFor] = React.useState(null);
@@ -51,8 +53,62 @@ function MobileApp({ dark, onThemeChange }) {
     return () => { if (timer) clearInterval(timer); };
   }, [date]);
 
-  // Persist favorites
+  // Persist favorites locally
   React.useEffect(() => writeLS(LS.fav, [...follows]), [follows]);
+
+  // ── Supabase auth ────────────────────────────────────────────────────────────
+  const userFromSession = (u) => ({
+    id: u.id,
+    name: u.user_metadata?.full_name || u.email,
+    email: u.email,
+    initial: (u.user_metadata?.full_name || u.email || '?')[0].toUpperCase(),
+  });
+
+  const loadSupabaseFavs = async (userId) => {
+    const sb = window.IF_SUPABASE;
+    if (!sb) return;
+    const { data } = await sb.from('favorites').select('subject_keys')
+      .eq('user_id', userId).maybeSingle();
+    if (data?.subject_keys?.length) {
+      setFollowsRaw(new Set(data.subject_keys));
+    }
+  };
+
+  React.useEffect(() => {
+    const sb = window.IF_SUPABASE;
+    if (!sb) return;
+    sb.auth.getSession().then(({ data: { session } }) => {
+      if (session) { setUser(userFromSession(session.user)); loadSupabaseFavs(session.user.id); }
+    });
+    const { data: { subscription } } = sb.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        setUser(userFromSession(session.user));
+        setShowLogin(false);
+        loadSupabaseFavs(session.user.id);
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+      }
+    });
+    return () => subscription.unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Save favorites to Supabase when they change (debounced 1.5 s)
+  const _saveFavTimer = React.useRef(null);
+  React.useEffect(() => {
+    const sb = window.IF_SUPABASE;
+    if (!sb || !user?.id) return;
+    clearTimeout(_saveFavTimer.current);
+    _saveFavTimer.current = setTimeout(async () => {
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) return;
+      await sb.from('favorites').upsert(
+        { user_id: session.user.id, subject_keys: [...follows], updated_at: new Date() },
+        { onConflict: 'user_id' }
+      );
+    }, 1500);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [follows]);
 
   // ── helpers ─────────────────────────────────────────────────────────────────
   const toggleFollow = (key) => {
@@ -153,6 +209,21 @@ function MobileApp({ dark, onThemeChange }) {
             </svg>
           )}
         </button>
+        {user ? (
+          <button onClick={() => { window.IF_SUPABASE?.auth.signOut(); setUser(null); }}
+                  title={`Skrá út (${user.email})`}
+                  style={{ ...mIconBtn(pal), background: pal.accent, borderColor: pal.accent,
+                           color: pal.accentFg, fontWeight: 800, fontSize: 13 }}>
+            {user.initial}
+          </button>
+        ) : (
+          <button onClick={() => setShowLogin(true)} style={mIconBtn(pal)} title="Skrá inn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+          </button>
+        )}
         <button onClick={() => onThemeChange && onThemeChange(!isDark)} style={mIconBtn(pal)}>
           {isDark ? (
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -378,6 +449,11 @@ function MobileApp({ dark, onThemeChange }) {
           toggle={toggleSport}
           clearAll={() => setSelectedSports(new Set([...selectedSports].filter((s) => s === 'fav')))}
           onClose={() => setSportPickerOpen(false)} />
+      )}
+      {showLogin && (
+        <LoginModal
+          onClose={() => setShowLogin(false)}
+          onLogin={(u) => { setUser(u); setShowLogin(false); }} />
       )}
       {starSheetFor && (() => {
         const ev = events.find((e) => e.id === starSheetFor);
