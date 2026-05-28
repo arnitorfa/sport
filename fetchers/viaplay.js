@@ -131,7 +131,16 @@ function normalizeProduct(product) {
   if (!isLiveStream) return null;
 
   const start = new Date(epg.start);
-  const end = new Date(epg.end || epg.streamEnd || epg.start);
+  // epg.end is the declared broadcast end; epg.streamEnd is the streaming
+  // window which Viaplay sometimes sets many hours after the real end.
+  // Cap: if the resolved end is more than 8 h after start we treat start+8h
+  // as the effective end so that long-running "stream windows" don't keep
+  // events appearing live/upcoming all day.
+  const MAX_DURATION_MS = 8 * 60 * 60 * 1000;
+  const rawEnd = new Date(epg.end || epg.streamEnd || epg.start);
+  const end = (!isNaN(rawEnd) && rawEnd - start <= MAX_DURATION_MS)
+    ? rawEnd
+    : new Date(start.getTime() + MAX_DURATION_MS);
   const now = new Date();
 
   let status = 'upcoming';
