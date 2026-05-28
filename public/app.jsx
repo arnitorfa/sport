@@ -112,10 +112,22 @@ function App() {
   React.useEffect(() => {
     const todayObj = D.dates.find((d) => d.offset === 0);
     if (!todayObj) return;
-    fetch(`/api/events?date=${todayObj.isoDate}`)
-      .then((r) => r.json())
-      .then((data) => setTodayEvents(data.events || []))
-      .catch(() => {});
+    const fetchToday = () =>
+      fetch(`/api/events?date=${todayObj.isoDate}`)
+        .then((r) => r.json())
+        .then((data) => {
+          const evs = data.events || [];
+          setTodayEvents(evs);
+          // If today is the selected date, also refresh main list and cache
+          setEventsByDate((prev) => ({ ...prev, [todayObj.isoDate]: evs }));
+          setDayCounts((prev) => ({ ...prev, [todayObj.isoDate]: evs.length }));
+        })
+        .catch(() => {});
+    fetchToday();
+    // Auto-refresh today's events every 5 minutes so statuses stay current
+    // (events move from live → done as the day progresses).
+    const timer = setInterval(fetchToday, 5 * 60 * 1000);
+    return () => clearInterval(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

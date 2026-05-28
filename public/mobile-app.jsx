@@ -31,10 +31,24 @@ function MobileApp({ dark, onThemeChange }) {
     if (!d) return;
     setLoadingEvents(true);
     setEvents([]);
-    fetch(`/api/events?date=${d.isoDate}`)
-      .then((r) => r.json())
-      .then((data) => { setEvents(data.events || []); setLoadingEvents(false); })
-      .catch(() => setLoadingEvents(false));
+
+    const doFetch = (showLoader) => {
+      if (showLoader) { setLoadingEvents(true); setEvents([]); }
+      return fetch(`/api/events?date=${d.isoDate}`)
+        .then((r) => r.json())
+        .then((data) => { setEvents(data.events || []); setLoadingEvents(false); })
+        .catch(() => setLoadingEvents(false));
+    };
+
+    doFetch(true);
+
+    // Auto-refresh today's events every 5 minutes so live → done transitions
+    // are reflected without requiring a manual page reload.
+    let timer = null;
+    if (date === 0) {
+      timer = setInterval(() => doFetch(false), 5 * 60 * 1000);
+    }
+    return () => { if (timer) clearInterval(timer); };
   }, [date]);
 
   // Persist favorites
