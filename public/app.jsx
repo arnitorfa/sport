@@ -224,6 +224,17 @@ function App() {
     n.has(key) ? n.delete(key) : n.add(key);
     setFollows(n);
   };
+
+  // key → { label, type } — built from all loaded events so user menu can show names
+  const followLabels = React.useMemo(() => {
+    const map = new Map();
+    Object.values(eventsByDate).flat().forEach(ev => {
+      (ev.subjects || []).forEach(sub => {
+        if (!map.has(sub.key)) map.set(sub.key, { label: sub.label, type: sub.type });
+      });
+    });
+    return map;
+  }, [eventsByDate]);
   const toggleStation = (id) => {
     setStations((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
   };
@@ -788,17 +799,58 @@ function App() {
             <div style={ifS.avatar} onClick={() => setUserMenu((m) => !m)}>{user.initial}</div>
             {userMenu &&
           <div style={{
-            position: 'absolute', top: 46, right: 0, width: 220,
+            position: 'absolute', top: 46, right: 0, width: 260,
             background: pal.card, border: `1px solid ${pal.hair}`,
             borderRadius: 12, padding: 8, zIndex: 100,
             boxShadow: '0 12px 40px rgba(0,0,0,0.18)'
           }}
           onMouseLeave={() => setUserMenu(false)}>
-                <div style={{ padding: '8px 10px 10px',
-              borderBottom: `1px solid ${pal.hair}` }}>
+                {/* User info */}
+                <div style={{ padding: '8px 10px 10px', borderBottom: `1px solid ${pal.hair}` }}>
                   <div style={{ fontSize: 13, fontWeight: 700 }}>{user.name}</div>
                   <div style={{ fontSize: 11, color: pal.muted, marginTop: 2 }}>{user.email}</div>
                 </div>
+
+                {/* Uppáhalds list */}
+                {follows.size > 0 && (
+                  <div style={{ borderBottom: `1px solid ${pal.hair}`, padding: '8px 0 4px' }}>
+                    <div style={{ padding: '0 10px 6px', fontSize: 9.5, fontWeight: 800,
+                                  color: pal.muted, letterSpacing: '0.18em',
+                                  textTransform: 'uppercase' }}>Uppáhalds</div>
+                    {[...follows].map(key => {
+                      const info = followLabels.get(key);
+                      const label = info?.label || key.split(':').slice(1).join(':').replace(/-/g, ' ');
+                      const typeLabel = info?.type === 'team' ? 'Lið' : info?.type === 'comp' ? 'Keppni' : '';
+                      return (
+                        <div key={key} style={{
+                          display: 'flex', alignItems: 'center',
+                          padding: '4px 6px 4px 10px', gap: 6,
+                        }}>
+                          <span style={{ flex: 1, minWidth: 0 }}>
+                            <span style={{ display: 'block', fontSize: 12.5, fontWeight: 600,
+                                           overflow: 'hidden', textOverflow: 'ellipsis',
+                                           whiteSpace: 'nowrap', lineHeight: 1.2 }}>
+                              {label}
+                            </span>
+                            {typeLabel && (
+                              <span style={{ fontSize: 9.5, color: pal.muted,
+                                             textTransform: 'uppercase', letterSpacing: '0.1em',
+                                             fontWeight: 600 }}>{typeLabel}</span>
+                            )}
+                          </span>
+                          <button onClick={() => toggleFollow(key)} style={{
+                            background: 'none', border: 'none', color: pal.muted,
+                            cursor: 'pointer', fontSize: 18, lineHeight: 1,
+                            padding: '2px 4px', flexShrink: 0, fontFamily: 'inherit',
+                            borderRadius: 4,
+                          }} title="Taka út úr uppáhalds">×</button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Sign out */}
                 <button onClick={() => {
                   window.IF_SUPABASE?.auth.signOut();
                   setUser(null); setUserMenu(false);
@@ -807,7 +859,7 @@ function App() {
               width: '100%', padding: '8px 10px', borderRadius: 6,
               border: 'none', background: 'transparent', textAlign: 'left',
               color: pal.fg, fontSize: 12.5, cursor: 'pointer',
-              fontFamily: 'inherit'
+              fontFamily: 'inherit', marginTop: 2,
             }}>Skrá út</button>
               </div>
           }
@@ -859,11 +911,11 @@ function App() {
             </button>
           )}
         </div>
-        {/* Secondary row: 7-column grid so Hjólreiðar falls under Íshokkí etc. */}
+        {/* Secondary row: same 10-column grid so Íshokkí falls under Allt etc. */}
         {moreSportsOpen && (
           <div style={isMobile
             ? { ...ifS.filterRow, marginTop: 4 }
-            : { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginTop: 4 }
+            : { display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 4, marginTop: 4 }
           }>
             {D.sports.filter((s) => s.secondary).map((sp) => renderSportChip(sp))}
           </div>

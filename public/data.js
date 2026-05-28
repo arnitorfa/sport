@@ -4,25 +4,33 @@
 
 window.IF_DATA = (function () {
   const sports = [
-    { id: 'all',      name: 'Allt' },
-    { id: 'fav',      name: 'Uppáhalds' },
-    { id: 'fb',       name: 'Fótbolti' },
-    { id: 'hb',       name: 'Handbolti' },
-    { id: 'kb',       name: 'Körfubolti' },
-    { id: 'f1',       name: 'Mótorsport' },
-    { id: 'tennis',   name: 'Tennis' },
-    { id: 'golf',     name: 'Golf' },
-    { id: 'mma',      name: 'MMA / Box' },
-    { id: 'hockey',   name: 'Íshokkí',   secondary: true },
-    { id: 'ski',      name: 'Skíði',      secondary: true },
-    { id: 'snooker',  name: 'Snóker',     secondary: true },
-    { id: 'baseball', name: 'Hafnabolti', secondary: true },
-    { id: 'darts',    name: 'Pílukast',   secondary: true },
-    { id: 'pool',     name: 'Biljard',    secondary: true },
-    { id: 'gym',      name: 'Fimleikar',  secondary: true },
-    { id: 'cycling',  name: 'Hjólreiðar', secondary: true },
-    { id: 'athletics',name: 'Frjálsar',   secondary: true },
-    { id: 'rugby',    name: 'Rugby',      secondary: true },
+    // ── Primary row (always visible) ─────────────────────────────────────────
+    { id: 'all',       name: 'Allt' },
+    { id: 'fav',       name: 'Uppáhalds' },
+    { id: 'fb',        name: 'Fótbolti' },
+    { id: 'hb',        name: 'Handbolti' },
+    { id: 'kb',        name: 'Körfubolti' },
+    { id: 'amfb',      name: 'Ameríska' },
+    { id: 'f1',        name: 'Akstursiþróttir' },
+    { id: 'golf',      name: 'Golf' },
+    { id: 'mma',       name: 'Bardagaíþróttir' },
+    // ── Secondary row (Fleiri) ────────────────────────────────────────────────
+    { id: 'hockey',    name: 'Íshokkí',          secondary: true },
+    { id: 'ski',       name: 'Vetraríþróttir',   secondary: true },
+    { id: 'snooker',   name: 'Snóker',           secondary: true },
+    { id: 'baseball',  name: 'Hafnabolti',       secondary: true },
+    { id: 'darts',     name: 'Pílukast',         secondary: true },
+    { id: 'pool',      name: 'Pool',             secondary: true },
+    { id: 'gym',       name: 'Fimleikar',        secondary: true },
+    { id: 'chess',     name: 'Skák',             secondary: true },
+    { id: 'padel',     name: 'Padel',            secondary: true },
+    { id: 'rowing',    name: 'Ruðningur',        secondary: true },
+    { id: 'volleyball',name: 'Blak',             secondary: true },
+    { id: 'swimming',  name: 'Sund',             secondary: true },
+    { id: 'athletics', name: 'Frjálsar',         secondary: true },
+    { id: 'tennis',    name: 'Tennis',            secondary: true },
+    { id: 'cycling',   name: 'Hjólreiðar',        secondary: true },
+    { id: 'other',     name: 'Óflokkað',          secondary: true },
   ];
 
   const stations = [
@@ -200,12 +208,65 @@ window.IF_DATA = (function () {
           <path d="M15 15 L18 19"/>
         `);
       case 'rugby':
-        // Rugby ball (oval)
         return wrap(`
           <ellipse cx="12" cy="12" rx="9" ry="6" transform="rotate(-30 12 12)"/>
           <line x1="7.5" y1="7.5" x2="16.5" y2="16.5"/>
           <path d="M10 6.5 C9 9 10 12 9.5 14.5"/>
           <path d="M14 9.5 C13 12 14 15 13.5 17.5"/>
+        `);
+      case 'amfb':
+        // American football — oval with laces
+        return wrap(`
+          <ellipse cx="12" cy="12" rx="9" ry="6" transform="rotate(-35 12 12)"/>
+          <line x1="7.8" y1="7.8" x2="16.2" y2="16.2"/>
+          <line x1="9.2" y1="11.3" x2="7.5" y2="12.7"/>
+          <line x1="12"  y1="9.8"  x2="10.3" y2="11.2"/>
+          <line x1="14.8" y1="12.8" x2="13.1" y2="14.2"/>
+        `);
+      case 'chess':
+        // King piece — cross on top, crown body, base
+        return wrap(`
+          <line x1="12" y1="2.5" x2="12" y2="7"/>
+          <line x1="9.5" y1="4.8" x2="14.5" y2="4.8"/>
+          <path d="M8.5 7 Q8 9.5 9 11 H15 Q16 9.5 15.5 7 Z"/>
+          <rect x="7.5" y="11" width="9" height="3" rx="1"/>
+          <rect x="6.5" y="14" width="11" height="2.5" rx="1"/>
+        `);
+      case 'padel':
+        // Round padel racquet + ball
+        return wrap(`
+          <ellipse cx="10" cy="9" rx="5.5" ry="6"/>
+          <rect x="9" y="14.5" width="2" height="6" rx="1"/>
+          <circle cx="17" cy="18" r="2.5"/>
+        `);
+      case 'rowing':
+        // Two crossed oars above a wave
+        return wrap(`
+          <line x1="3" y1="5" x2="19" y2="16"/>
+          <line x1="5" y1="16" x2="21" y2="5"/>
+          <path d="M2 20 Q5 18 8 20 Q11 22 14 20 Q17 18 22 20"/>
+        `);
+      case 'volleyball':
+        // Ball with three curved panels
+        return wrap(`
+          <circle cx="12" cy="12" r="9"/>
+          <path d="M3.5 9 Q8 14 3.5 19"/>
+          <path d="M20.5 9 Q16 14 20.5 19"/>
+          <path d="M8 3.5 Q12 8 16 3.5"/>
+        `);
+      case 'swimming':
+        // Swimmer silhouette + wave
+        return wrap(`
+          <circle cx="18" cy="5.5" r="2"/>
+          <path d="M7 10 L11 8 L15 10 L18 7.5"/>
+          <path d="M2 15 Q5 13 8 15 Q11 17 14 15 Q17 13 20 15 Q22 16 22 16"/>
+          <path d="M2 19 Q5 17 8 19 Q11 21 14 19 Q17 17 22 19"/>
+        `);
+      case 'other':
+        // Question mark
+        return wrap(`
+          <path d="M9.5 9 a3 3 0 1 1 4 2.8 C12 13 12 14 12 15"/>
+          <circle cx="12" cy="18" r="1" fill="currentColor"/>
         `);
       case 'fav':
         return wrap(`<path d="M12 3 L14.4 9 L20.7 9.5 L15.9 13.8 L17.4 20 L12 16.7 L6.6 20 L8.1 13.8 L3.3 9.5 L9.6 9 Z"/>`);
