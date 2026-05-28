@@ -287,10 +287,7 @@ function App() {
     for (const ev of matches) {
       if (ev._isoDate !== lastDate) {
         lastDate = ev._isoDate;
-        const d = new Date(ev._isoDate + 'T00:00:00');
-        const label = d.toLocaleDateString('is-IS', {
-          weekday: 'long', month: 'long', day: 'numeric', timeZone: 'Atlantic/Reykjavik',
-        });
+        const label = D.formatDateIs(ev._isoDate);
         groups.push({ date: ev._isoDate, label, events: [] });
       }
       groups[groups.length - 1].events.push(ev);
@@ -306,13 +303,16 @@ function App() {
     .filter((e) => sportIds.length === 0 || sportIds.includes(e.sport))
     .filter((e) => e.status === 'live');
 
-  // Timeline shows the selected day's events, excluding ones that are live now
-  // (they appear in the left panel instead).
-  const others = filtered.filter((e) => e.status !== 'live');
+  // Timeline includes live events so they remain visible in the main list
+  // (with their LIVE badge). They also appear in the sidebar live panel.
+  const others = filtered;
 
-  // Sort upcoming events chronologically (timeline is now flat — no hour
-  // grouping; each event has its own timestamp + countdown).
-  const upcoming = [...others].sort((a, b) => a.time.localeCompare(b.time));
+  // Sort: live events first (with their badge), then chronologically.
+  const upcoming = [...others].sort((a, b) => {
+    if (a.status === 'live' && b.status !== 'live') return -1;
+    if (b.status === 'live' && a.status !== 'live') return 1;
+    return a.time.localeCompare(b.time);
+  });
 
   // True once the user has at least one custom logo (any theme variant) for
   // EVERY station. When true we hide the standalone logo-settings button —

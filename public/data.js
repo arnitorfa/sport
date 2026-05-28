@@ -77,6 +77,23 @@ window.IF_DATA = (function () {
   }
   const dates = buildDates();
 
+  // ── Icelandic date formatter (no browser locale dependency) ──────────────
+  const _weekdaysFull = ['Sunnudagur','Mánudagur','Þriðjudagur','Miðvikudagur','Fimmtudagur','Föstudagur','Laugardagur'];
+  const _monthsFull   = ['janúar','febrúar','mars','apríl','maí','júní','júlí','ágúst','september','október','nóvember','desember'];
+
+  // Returns e.g. "Mánudagur, 27. maí" or "Í dag" / "Á morgun" / "Í gær"
+  function formatDateIs(isoDate) {
+    // Check if it matches a known relative date
+    const known = dates.find((d) => d.isoDate === isoDate);
+    if (known && known.label) {
+      // label is 'Í dag' / 'Á morgun' / 'Í gær' — append weekday for clarity
+      const d = new Date(isoDate + 'T00:00:00Z');
+      return `${known.label} — ${_weekdaysFull[d.getUTCDay()]}, ${d.getUTCDate()}. ${_monthsFull[d.getUTCMonth()]}`;
+    }
+    const d = new Date(isoDate + 'T00:00:00Z');
+    return `${_weekdaysFull[d.getUTCDay()]}, ${d.getUTCDate()}. ${_monthsFull[d.getUTCMonth()]}`;
+  }
+
   // ── Sport icon (monoline outline) ──────────────────────────────────────────
   function sportIcon(id, size = 22, strokeWidth = 1.5) {
     const wrap = (inner) => (
@@ -307,5 +324,5 @@ window.IF_DATA = (function () {
   const SUPABASE_URL  = 'https://kbmjtondcqupdsumgyex.supabase.co';
   const SUPABASE_ANON = 'sb_publishable_Ash-Au72xRzfvPTuSS4jHw_vsugN-Qz';
 
-  return { sports, stations, dates, events, sportIcon, countdown, SUPABASE_URL, SUPABASE_ANON };
+  return { sports, stations, dates, events, sportIcon, countdown, formatDateIs, SUPABASE_URL, SUPABASE_ANON };
 })();

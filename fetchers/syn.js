@@ -84,7 +84,7 @@ function detectSport(flokkur, title) {
 
   if (text.includes('darts') || text.includes('pílukast')) return 'darts';
 
-  if (text.includes('biljard') || text.includes('billiards')) return 'pool';
+  if (text.includes('biljard') || text.includes('billiards') || /\bpool\b/.test(text)) return 'pool';
 
   if (text.includes('fimleikar') || text.includes('gymnastics') ||
       text.includes('þyngdarlyft') || text.includes('weightlifting')) return 'gym';

@@ -93,6 +93,7 @@ function detectViaplaySport(publicPath, title, seriesTitle) {
   if (t.includes('handball') || t.includes('handbolti')) return 'hb';
   if (t.includes('snooker')) return 'snooker';
   if (t.includes('darts')) return 'darts';
+  if (t.includes('biljard') || t.includes('billiards') || /\bpool\b/.test(t)) return 'pool';
   if (t.includes('cycling') || t.includes('tour de france')) return 'cycling';
   if (t.includes('rugby') || t.includes('nfl')) return 'rugby';
   if (t.includes('athletics') || t.includes('marathon')) return 'athletics';
