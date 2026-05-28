@@ -41,6 +41,13 @@ function App() {
   const setSelectedSports = (n) => setSelectedSportsRaw(new Set(n));
   const [stations, setStations] = React.useState(D.stations.map((s) => s.id));
   const [search, setSearch] = React.useState('');
+  // Debounced value — actual search only runs 300 ms after typing stops,
+  // avoiding stutter while the user is mid-word.
+  const [debouncedSearch, setDebouncedSearch] = React.useState('');
+  React.useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
   const [follows, setFollowsRaw] = React.useState(() => new Set(readLS(LS.fav, [
   't:vikingur-fb-k', 'c:f1-2026', 't:liverpool-fb-k']
   )));
@@ -131,10 +138,76 @@ function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // persist
+  // ── Supabase auth ──────────────────────────────────────────────────────────
+
+  // Build a user object from a Supabase session user
+  const userFromSession = (u) => ({
+    id: u.id,
+    name: u.user_metadata?.full_name || u.email,
+    email: u.email,
+    initial: (u.user_metadata?.full_name || u.email || '?')[0].toUpperCase(),
+  });
+
+  // Load favorites from Supabase for the given user id
+  const loadSupabaseFavs = async (userId) => {
+    const sb = window.IF_SUPABASE;
+    if (!sb) return;
+    const { data } = await sb
+      .from('favorites')
+      .select('subject_keys')
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (data?.subject_keys?.length) {
+      setFollows(new Set(data.subject_keys));
+    }
+  };
+
+  // Listen for Supabase auth state changes (handles magic-link callback)
+  React.useEffect(() => {
+    const sb = window.IF_SUPABASE;
+    if (!sb) return;
+
+    // Restore existing session on page load
+    sb.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setUser(userFromSession(session.user));
+        loadSupabaseFavs(session.user.id);
+      }
+    });
+
+    const { data: { subscription } } = sb.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        setUser(userFromSession(session.user));
+        setShowLogin(false);
+        loadSupabaseFavs(session.user.id);
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Save favorites to Supabase whenever they change (debounced 1.5 s)
+  const _saveFavTimer = React.useRef(null);
+  React.useEffect(() => {
+    const sb = window.IF_SUPABASE;
+    if (!sb || !user?.id) return;
+    clearTimeout(_saveFavTimer.current);
+    _saveFavTimer.current = setTimeout(async () => {
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) return;
+      await sb.from('favorites').upsert(
+        { user_id: session.user.id, subject_keys: [...follows], updated_at: new Date() },
+        { onConflict: 'user_id' }
+      );
+    }, 1500);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [follows]);
+
+  // persist theme / logos locally (not sensitive, no need for cloud)
   React.useEffect(() => writeLS(LS.theme, theme), [theme]);
-  React.useEffect(() => writeLS(LS.fav, [...follows]), [follows]);
-  React.useEffect(() => writeLS(LS.user, user), [user]);
   React.useEffect(() => writeLS(LS.logos, logos), [logos]);
 
   // Keep <body> background in sync with the theme so the side gutters around
@@ -172,9 +245,9 @@ function App() {
   const favActive = selectedSports.has('fav');
   const sportIds = [...selectedSports].filter((s) => s !== 'fav');
 
-  // When a search query is active we bypass date selection and sport/fav filters
-  // entirely — results come from ALL cached dates.
-  const isSearching = search.trim().length > 0;
+  // When a debounced search query is active we bypass date selection and sport/fav
+  // filters entirely — results come from ALL cached dates.
+  const isSearching = debouncedSearch.trim().length > 0;
 
   const filtered = events.
   filter((e) => stations.includes(e.station)).
@@ -186,7 +259,7 @@ function App() {
   // Group results by date so we can render date headers in the timeline.
   const searchGroups = React.useMemo(() => {
     if (!isSearching) return null;
-    const q = search.toLowerCase();
+    const q = debouncedSearch.toLowerCase();
     const matches = Object.entries(eventsByDate)
       .flatMap(([isoDate, evs]) =>
         evs.filter((e) => {
@@ -212,7 +285,7 @@ function App() {
       groups[groups.length - 1].events.push(ev);
     }
     return groups;
-  }, [isSearching, search, eventsByDate]);
+  }, [isSearching, debouncedSearch, eventsByDate]);
 
   // Live panel always reflects what's happening RIGHT NOW (today's events),
   // regardless of which day is selected in the date strip.
@@ -362,17 +435,16 @@ function App() {
       display: isMobile ? 'none' : undefined,
     }),
 
-    // sport filter
-    filterBar: isMobile ? {
-      padding: '8px 12px',
+    // sport filter — outer wrapper only; inner rows use their own grid/flex
+    filterBar: {
+      padding: isMobile ? '8px 12px' : '10px 28px',
+      borderBottom: `1px solid ${pal.hair}`,
+    },
+    filterRow: isMobile ? {
       display: 'flex', overflowX: 'auto', overflowY: 'hidden',
-      gap: 4, borderBottom: `1px solid ${pal.hair}`,
-      scrollbarWidth: 'none', msOverflowStyle: 'none',
+      gap: 4, scrollbarWidth: 'none', msOverflowStyle: 'none',
     } : {
-      padding: '14px 28px',
-      display: 'grid',
-      gridTemplateColumns: 'repeat(11, 1fr)',
-      gap: 4, borderBottom: `1px solid ${pal.hair}`
+      display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4,
     },
     sportChip: (active, isFav) => ({
       display: 'flex', flexDirection: 'column', alignItems: 'center',
@@ -653,11 +725,11 @@ function App() {
       {/* ── TOP BAR ── */}
       <div style={ifS.topBar}>
         <div style={ifS.logoWrap}>
-          <div style={ifS.logoMark}>ÍF</div>
-          <div>
-            <div style={ifS.logoName}>Íþróttir framundan</div>
-            <div style={ifS.logoTag}>Lifandi · 5 stöðvar · Ísland</div>
-          </div>
+          <img
+            src={`assets/logos/sportzone-${isDark ? 'dark' : 'light'}.svg`}
+            alt="SportZone"
+            style={{ height: 28, width: 'auto', display: 'block' }}
+          />
         </div>
 
         <div style={ifS.searchWrap}>
@@ -669,8 +741,15 @@ function App() {
             placeholder="Leita að liði, íþrótt, keppni…"
             value={search}
             onChange={(e) => setSearch(e.target.value)} />
-          
-          <span style={ifS.kbd}>⌘ K</span>
+          {search ? (
+            <button onClick={() => { setSearch(''); setDebouncedSearch(''); }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer',
+                      color: pal.muted, fontSize: 16, lineHeight: 1, padding: '0 2px',
+                      display: 'flex', alignItems: 'center' }}
+                    aria-label="Hreinsa leit">×</button>
+          ) : (
+            <span style={ifS.kbd}>⌘ K</span>
+          )}
         </div>
 
         {/* Theme toggle */}
@@ -734,7 +813,10 @@ function App() {
                   </svg>
                   Merki stöðvanna
                 </button>
-                <button onClick={() => {setUser(null);setUserMenu(false);}}
+                <button onClick={() => {
+                  window.IF_SUPABASE?.auth.signOut();
+                  setUser(null); setUserMenu(false);
+                }}
             style={{
               width: '100%', padding: '8px 10px', borderRadius: 6,
               border: 'none', background: 'transparent', textAlign: 'left',
@@ -754,7 +836,7 @@ function App() {
           const cnt = dayCounts[d.isoDate] !== undefined ? dayCounts[d.isoDate] : '·';
           return (
             <div key={d.offset} style={ifS.dateCell(active)}
-            onClick={() => setDate(d.offset)}>
+            onClick={() => { setDate(d.offset); setSearch(''); setDebouncedSearch(''); }}>
               <div style={ifS.dateCellWk(active)}>{d.weekday}</div>
               <div style={ifS.dateCellD}>{String(d.day).padStart(2, '0')}</div>
               {d.label ?
@@ -768,27 +850,34 @@ function App() {
 
       {/* ── SPORT FILTER ── */}
       <div style={ifS.filterBar}>
-        {D.sports.filter((s) => !s.secondary).map((sp) => renderSportChip(sp))}
-        {D.sports.some((s) => s.secondary) && (
-          <button style={{ ...ifS.sportChip(false, false), ...(isMobile ? {} : { gridColumn: 'span 2' }) }}
-                  onClick={() => setMoreSportsOpen((o) => !o)}>
-            <div style={{ position: 'relative' }}>
-              <svg width="34" height="34" viewBox="0 0 24 24" fill="none"
-                   stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                {moreSportsOpen ? (
-                  <path d="M6 14 L12 8 L18 14"/>
-                ) : (
-                  <path d="M6 10 L12 16 L18 10"/>
-                )}
-              </svg>
-            </div>
-            <span style={ifS.sportChipLabel(false)}>
-              {moreSportsOpen ? 'Loka' : 'Fleiri íþróttir'}
-            </span>
-          </button>
-        )}
-        {moreSportsOpen && D.sports.filter((s) => s.secondary).map((sp, i) =>
-          renderSportChip(sp, (!isMobile && i === 0) ? { gridColumnStart: 3 } : undefined)
+        {/* Primary row: always-visible sports + Fleiri toggle */}
+        <div style={ifS.filterRow}>
+          {D.sports.filter((s) => !s.secondary).map((sp) => renderSportChip(sp))}
+          {D.sports.some((s) => s.secondary) && (
+            <button style={ifS.sportChip(false, false)}
+                    onClick={() => setMoreSportsOpen((o) => !o)}>
+              <div style={{ position: 'relative' }}>
+                <svg width={isMobile ? 24 : 34} height={isMobile ? 24 : 34}
+                     viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" strokeWidth="1.6"
+                     strokeLinecap="round" strokeLinejoin="round">
+                  {moreSportsOpen
+                    ? <path d="M6 14 L12 8 L18 14"/>
+                    : <path d="M6 10 L12 16 L18 10"/>
+                  }
+                </svg>
+              </div>
+              <span style={ifS.sportChipLabel(false)}>
+                {moreSportsOpen ? 'Loka' : 'Fleiri'}
+              </span>
+            </button>
+          )}
+        </div>
+        {/* Secondary row: appears below, also 7 per row */}
+        {moreSportsOpen && (
+          <div style={{ ...ifS.filterRow, marginTop: 4 }}>
+            {D.sports.filter((s) => s.secondary).map((sp) => renderSportChip(sp))}
+          </div>
         )}
       </div>
 
@@ -904,9 +993,6 @@ function App() {
                   </div>
                   <div style={ifS.evMid}>{renderEventMeta(ev)}</div>
                   <div style={ifS.evRight}>
-                    <div style={ifS.countdownBig}>
-                      {D.countdown(ev.time, ev.status)}
-                    </div>
                     <div style={ifS.evRow2}>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
                         <StationLogo station={st} size="sm" logoUrl={logoFor(st)} isDark={isDark} />
@@ -952,7 +1038,7 @@ function App() {
                     )}
                   </div>
                   {(!searchGroups || totalSearchHits === 0) && (
-                    <div style={ifS.timelineEmpty}>Engir viðburðir fundust fyrir „{search}".</div>
+                    <div style={ifS.timelineEmpty}>Engir viðburðir fundust fyrir „{debouncedSearch}".</div>
                   )}
                   {searchGroups && searchGroups.map((group) => (
                     <div key={group.date}>

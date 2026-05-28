@@ -241,5 +241,10 @@ window.IF_DATA = (function () {
   // events starts empty — the app fetches from the backend API
   const events = [];
 
-  return { sports, stations, dates, events, sportIcon, countdown };
+  // ── Supabase configuration ────────────────────────────────────────────────
+  // Project: https://kbmjtondcqupdsumgyex.supabase.co
+  const SUPABASE_URL  = 'https://kbmjtondcqupdsumgyex.supabase.co';
+  const SUPABASE_ANON = 'sb_publishable_Ash-Au72xRzfvPTuSS4jHw_vsugN-Qz';
+
+  return { sports, stations, dates, events, sportIcon, countdown, SUPABASE_URL, SUPABASE_ANON };
 })();

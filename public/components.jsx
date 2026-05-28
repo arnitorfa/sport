@@ -185,66 +185,126 @@ function StarPopover({ event, follows, toggleFollow, onClose, anchor }) {
   );
 }
 
-// ── Login mock modal ────────────────────────────────────────────────────────
+// ── Supabase client (initialised once, shared across the app) ────────────────
+const _sb = (() => {
+  const d = window.IF_DATA;
+  if (!d?.SUPABASE_URL || !d?.SUPABASE_ANON || !window.supabase) return null;
+  return window.supabase.createClient(d.SUPABASE_URL, d.SUPABASE_ANON);
+})();
+window.IF_SUPABASE = _sb;
+
+// ── Login modal — Supabase magic-link flow ───────────────────────────────────
 function LoginModal({ onClose, onLogin }) {
+  const [email, setEmail]   = React.useState('');
+  const [sent, setSent]     = React.useState(false);
+  const [busy, setBusy]     = React.useState(false);
+  const [err, setErr]       = React.useState('');
+
+  const send = async () => {
+    const trimmed = email.trim();
+    if (!trimmed.includes('@')) { setErr('Sláðu inn gilt netfang.'); return; }
+    setBusy(true); setErr('');
+    const { error } = await _sb.auth.signInWithOtp({
+      email: trimmed,
+      options: { emailRedirectTo: window.location.origin + window.location.pathname },
+    });
+    setBusy(false);
+    if (error) { setErr(error.message); return; }
+    setSent(true);
+  };
+
+  const modalBox = {
+    width: 380, background: 'var(--if-card)', borderRadius: 16,
+    padding: 28, border: '1px solid var(--if-hair)',
+    boxShadow: '0 30px 80px rgba(0,0,0,0.35)', color: 'var(--if-fg)',
+  };
+  const overlay = {
+    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
+    zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center',
+  };
+  const logo = {
+    width: 44, height: 44, borderRadius: 11, background: 'var(--if-accent)',
+    color: 'var(--if-accent-fg)', display: 'flex', alignItems: 'center',
+    justifyContent: 'center', fontSize: 20, fontWeight: 800,
+    fontFamily: '"JetBrains Mono", monospace', letterSpacing: '-0.04em',
+    marginBottom: 18,
+  };
+
+  if (sent) {
+    return (
+      <div style={overlay} onClick={onClose}>
+        <div onClick={e => e.stopPropagation()} style={modalBox}>
+          <div style={{ ...logo, background: 'var(--if-accent)' }}>✓</div>
+          <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Hlekkur sendur!</div>
+          <div style={{ fontSize: 13, color: 'var(--if-muted)', lineHeight: 1.6, marginBottom: 22 }}>
+            Við sendum þér hlekk á <strong>{email}</strong>.<br />
+            Athugaðu tölvupóstinn þinn og smelltu á hlekkinn til að skrá þig inn.
+          </div>
+          <button onClick={onClose} style={{
+            width: '100%', padding: '11px', borderRadius: 10,
+            border: 'none', background: 'var(--if-accent)', color: 'var(--if-accent-fg)',
+            fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+          }}>Loka</button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
-      zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center',
-    }} onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} style={{
-        width: 380, background: 'var(--if-card)', borderRadius: 16,
-        padding: 28, border: '1px solid var(--if-hair)',
-        boxShadow: '0 30px 80px rgba(0,0,0,0.35)', color: 'var(--if-fg)',
-      }}>
-        <div style={{
-          width: 44, height: 44, borderRadius: 11, background: 'var(--if-accent)',
-          color: 'var(--if-accent-fg)', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', fontSize: 20, fontWeight: 800,
-          fontFamily: '"JetBrains Mono", monospace', letterSpacing: '-0.04em',
-          marginBottom: 18,
-        }}>ÍF</div>
+    <div style={overlay} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={modalBox}>
+        <img src="assets/logos/sportzone-dark.svg" alt="SportZone"
+             style={{ height: 22, width: 'auto', marginBottom: 18, display: 'block' }} />
         <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em',
                       lineHeight: 1.15, marginBottom: 8 }}>
-          Skráðu þig inn til að halda í uppáhaldsleikina þína
+          Skráðu þig inn
         </div>
         <div style={{ fontSize: 13, color: 'var(--if-muted)', lineHeight: 1.5,
                       marginBottom: 22 }}>
-          Þú færð sömu uppáhaldslið og keppnir á öllum tækjum.
-          Sýnishorn — engin raunveruleg innskráning.
+          Við sendum þér hlekk á tölvupóstinn þinn — ekkert lykilorð þarf.
+          Uppáhöldin þín vistast og eru tiltæk á öllum tækjum.
         </div>
-        <button onClick={() => onLogin({ name: 'Anna Jónsdóttir', email: 'anna@gmail.com', initial: 'A' })}
-                style={{
+
+        <input
+          type="email"
+          autoFocus
+          placeholder="netfang@example.com"
+          value={email}
+          onChange={e => { setEmail(e.target.value); setErr(''); }}
+          onKeyDown={e => e.key === 'Enter' && send()}
+          style={{
+            width: '100%', padding: '11px 14px', borderRadius: 10, marginBottom: 8,
+            border: '1px solid var(--if-hair2)', background: 'var(--if-card2)',
+            color: 'var(--if-fg)', fontSize: 14, outline: 'none',
+            fontFamily: 'inherit', boxSizing: 'border-box',
+          }}
+        />
+
+        {err && (
+          <div style={{ fontSize: 12.5, color: '#FF3B47', marginBottom: 8 }}>{err}</div>
+        )}
+
+        <button onClick={send} disabled={busy} style={{
           width: '100%', padding: '12px 14px', borderRadius: 10,
-          border: '1px solid var(--if-hair2)', background: 'var(--if-card2)',
-          color: 'var(--if-fg)', fontSize: 14, fontWeight: 600, cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-          fontFamily: 'inherit',
+          border: 'none', background: 'var(--if-accent)', color: 'var(--if-accent-fg)',
+          fontSize: 14, fontWeight: 700, cursor: busy ? 'default' : 'pointer',
+          opacity: busy ? 0.65 : 1, fontFamily: 'inherit',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
         }}>
-          <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
-            <path fill="#4285F4" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6 8-11.3 8a12 12 0 1 1 7.9-21l5.7-5.7A20 20 0 1 0 44 24c0-1.2-.1-2.4-.4-3.5z"/>
-            <path fill="#34A853" d="M6.3 14.7l6.6 4.8A12 12 0 0 1 24 12c3 0 5.8 1.1 7.9 3l5.7-5.7A20 20 0 0 0 6.3 14.7z"/>
-            <path fill="#FBBC05" d="M24 44a20 20 0 0 0 13.4-5l-6.2-5.2c-1.9 1.3-4.4 2.2-7.2 2.2a12 12 0 0 1-11.3-8l-6.6 5.1A20 20 0 0 0 24 44z"/>
-            <path fill="#EA4335" d="M43.6 20.5H42V20H24v8h11.3a12 12 0 0 1-4.1 5.6l6.2 5.2C41.4 35.8 44 30.4 44 24c0-1.2-.1-2.4-.4-3.5z"/>
-          </svg>
-          Halda áfram með Google
+          {busy ? 'Sendi…' : (
+            <>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                <polyline points="22,6 12,13 2,6"/>
+              </svg>
+              Senda hlekk
+            </>
+          )}
         </button>
-        <button onClick={() => onLogin({ name: 'Jón Sigurðsson', email: 'jon@facebook.com', initial: 'J' })}
-                style={{
-          width: '100%', padding: '12px 14px', borderRadius: 10, marginTop: 8,
-          border: '1px solid var(--if-hair2)', background: 'var(--if-card2)',
-          color: 'var(--if-fg)', fontSize: 14, fontWeight: 600, cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-          fontFamily: 'inherit',
-        }}>
-          <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
-            <path fill="#1877F2" d="M48 24C48 10.7 37.3 0 24 0S0 10.7 0 24c0 12 8.8 21.9 20.25 23.7V31H14.16V24h6.09v-5.3c0-6 3.58-9.34 9.06-9.34 2.62 0 5.36.47 5.36.47v5.9h-3c-2.98 0-3.9 1.85-3.9 3.74V24h6.64l-1.06 7h-5.58v16.7C39.2 45.9 48 36 48 24z"/>
-            <path fill="#FFFFFF" d="M33.34 31l1.06-7h-6.64v-4.53c0-1.9.92-3.74 3.9-3.74h3v-5.9s-2.74-.47-5.36-.47c-5.48 0-9.06 3.34-9.06 9.34V24h-6.09v7h6.09v16.7c1.22.2 2.48.3 3.75.3 1.27 0 2.53-.1 3.75-.3V31h5.58z"/>
-          </svg>
-          Halda áfram með Facebook
-        </button>
+
         <button onClick={onClose} style={{
-          width: '100%', padding: '10px', marginTop: 10, borderRadius: 10,
+          width: '100%', padding: '10px', marginTop: 8, borderRadius: 10,
           border: 'none', background: 'transparent', color: 'var(--if-muted)',
           fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
         }}>
