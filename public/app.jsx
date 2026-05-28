@@ -814,45 +814,6 @@ function App() {
                   <div style={{ fontSize: 11, color: pal.muted, marginTop: 2 }}>{user.email}</div>
                 </div>
 
-                {/* Uppáhalds list */}
-                {follows.size > 0 && (
-                  <div style={{ borderBottom: `1px solid ${pal.hair}`, padding: '8px 0 4px' }}>
-                    <div style={{ padding: '0 10px 6px', fontSize: 9.5, fontWeight: 800,
-                                  color: pal.muted, letterSpacing: '0.18em',
-                                  textTransform: 'uppercase' }}>Uppáhalds</div>
-                    {[...follows].map(key => {
-                      const info = followLabels.get(key);
-                      const label = info?.label || key.split(':').slice(1).join(':').replace(/-/g, ' ');
-                      const typeLabel = info?.type === 'team' ? 'Lið' : info?.type === 'comp' ? 'Keppni' : '';
-                      return (
-                        <div key={key} style={{
-                          display: 'flex', alignItems: 'center',
-                          padding: '4px 6px 4px 10px', gap: 6,
-                        }}>
-                          <span style={{ flex: 1, minWidth: 0 }}>
-                            <span style={{ display: 'block', fontSize: 12.5, fontWeight: 600,
-                                           overflow: 'hidden', textOverflow: 'ellipsis',
-                                           whiteSpace: 'nowrap', lineHeight: 1.2 }}>
-                              {label}
-                            </span>
-                            {typeLabel && (
-                              <span style={{ fontSize: 9.5, color: pal.muted,
-                                             textTransform: 'uppercase', letterSpacing: '0.1em',
-                                             fontWeight: 600 }}>{typeLabel}</span>
-                            )}
-                          </span>
-                          <button onClick={() => toggleFollow(key)} style={{
-                            background: 'none', border: 'none', color: pal.muted,
-                            cursor: 'pointer', fontSize: 18, lineHeight: 1,
-                            padding: '2px 4px', flexShrink: 0, fontFamily: 'inherit',
-                            borderRadius: 4,
-                          }} title="Taka út úr uppáhalds">×</button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
                 {/* Sign out */}
                 <button onClick={() => {
                   window.IF_SUPABASE?.auth.signOut();
