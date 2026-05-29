@@ -18,6 +18,7 @@ function MobileApp({ dark, onThemeChange }) {
   const [logos] = React.useState(() => readLS(LS.logos, {}));
   const [user, setUser] = React.useState(() => readLS(LS.user, null));
   const [showLogin, setShowLogin] = React.useState(false);
+  const [showUserMenu, setShowUserMenu] = React.useState(false);
   const [sportPickerOpen, setSportPickerOpen] = React.useState(false);
   const [datePickerOpen, setDatePickerOpen] = React.useState(false);
   const [starSheetFor, setStarSheetFor] = React.useState(null);
@@ -95,7 +96,7 @@ function MobileApp({ dark, onThemeChange }) {
         setUser(userFromSession(session.user));
         setShowLogin(false);
         loadSupabaseFavs(session.user.id);
-      } else if (event === 'SIGNED_OUT') {
+      } else if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED' && !session) {
         setUser(null);
       }
     });
@@ -179,11 +180,19 @@ function MobileApp({ dark, onThemeChange }) {
   const visibleDates = D.dates.filter((d) => d.offset >= -1 && d.offset <= 3);
   const isToday = date === 0;
 
+  // CSS variables so LoginModal (and other shared components) render correctly
+  const cssVars = {
+    '--if-bg': pal.bg, '--if-fg': pal.fg, '--if-card': pal.card, '--if-card2': pal.card2,
+    '--if-hair': pal.hair, '--if-hair2': pal.hair2, '--if-muted': pal.muted,
+    '--if-accent': pal.accent, '--if-accent-fg': pal.accentFg,
+  };
+
   return (
     <div style={{
       width: '100%', minHeight: '100vh',
       background: pal.bg, color: pal.fg,
       fontFamily: '"Inter", system-ui, sans-serif',
+      ...cssVars,
     }}>
       <style>{`
         @keyframes ifPulseM {
@@ -221,8 +230,8 @@ function MobileApp({ dark, onThemeChange }) {
           )}
         </button>
         {user ? (
-          <button onClick={() => { window.IF_SUPABASE?.auth.signOut(); setUser(null); }}
-                  title={`Skrá út (${user.email})`}
+          <button onClick={() => setShowUserMenu(true)}
+                  title={user.email}
                   style={{ ...mIconBtn(pal), background: pal.accent, borderColor: pal.accent,
                            color: pal.accentFg, fontWeight: 800, fontSize: 13 }}>
             {user.initial}
@@ -465,6 +474,52 @@ function MobileApp({ dark, onThemeChange }) {
         <LoginModal
           onClose={() => setShowLogin(false)}
           onLogin={(u) => { setUser(u); setShowLogin(false); }} />
+      )}
+      {/* ── User menu bottom sheet ─────────────────────────────────────────── */}
+      {showUserMenu && user && (
+        <div onClick={() => setShowUserMenu(false)}
+             style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 300,
+                      display: 'flex', alignItems: 'flex-end' }}>
+          <div onClick={(e) => e.stopPropagation()}
+               style={{ width: '100%', background: pal.card, borderRadius: '18px 18px 0 0',
+                        padding: '8px 0 max(20px, env(safe-area-inset-bottom))',
+                        border: `1px solid ${pal.hair}`, borderBottom: 'none' }}>
+            {/* drag handle */}
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: pal.hair2,
+                          margin: '0 auto 18px' }} />
+            {/* user info */}
+            <div style={{ padding: '0 20px 16px', display: 'flex', alignItems: 'center', gap: 12,
+                          borderBottom: `1px solid ${pal.hair}` }}>
+              <div style={{ width: 40, height: 40, borderRadius: '50%', background: pal.accent,
+                            color: pal.accentFg, display: 'flex', alignItems: 'center',
+                            justifyContent: 'center', fontWeight: 800, fontSize: 16, flexShrink: 0 }}>
+                {user.initial}
+              </div>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 2 }}>{user.name}</div>
+                <div style={{ fontSize: 12, color: pal.muted }}>{user.email}</div>
+              </div>
+            </div>
+            {/* sign out */}
+            <button
+              onClick={() => {
+                window.IF_SUPABASE?.auth.signOut();
+                setUser(null);
+                setShowUserMenu(false);
+              }}
+              style={{ width: '100%', padding: '15px 20px', background: 'none', border: 'none',
+                       textAlign: 'left', color: pal.liveAccent, fontSize: 15, fontWeight: 600,
+                       cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12,
+                       fontFamily: 'inherit' }}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+              Skrá út
+            </button>
+          </div>
+        </div>
       )}
       {starSheetFor && (() => {
         const ev = events.find((e) => e.id === starSheetFor);
