@@ -188,8 +188,16 @@ export async function fetchSynSchedule(date, fetch) {
         const events = await resp.json();
         if (!Array.isArray(events)) return;
         const isKki = channel.startsWith('kkitv');
-        // API returns a full month — filter to the requested date
-        const filtered = events.filter(ev => (ev.dagsetning || '').slice(0, 10) === dateStr);
+        // Filter by actual start time in Reykjavík timezone.
+        // We do NOT use the `dagsetning` field because Sýn can list the same late-night
+        // event under two consecutive dates (e.g. an NHL game starting 00:30 Saturday
+        // may have dagsetning entries for both Friday and Saturday).
+        const filtered = events.filter(ev => {
+          if (!ev.upphaf) return false;
+          const startDate = new Date(ev.upphaf)
+            .toLocaleDateString('sv-SE', { timeZone: 'Atlantic/Reykjavik' });
+          return startDate === dateStr;
+        });
         console.log(`Sýn ${channel}: ${filtered.length}/${events.length} events on ${dateStr}`);
         for (const ev of filtered) {
           const normalized = normalizeEvent(ev, channel, isKki);

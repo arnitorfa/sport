@@ -220,8 +220,18 @@ export async function fetchViaplaySchedule(date, fetch) {
       }
     }
 
-    console.log(`Viaplay live sports events: ${allEvents.length}`);
-    return allEvents;
+    // Filter to events that actually START on the requested date (Reykjavík time).
+    // Viaplay's API can return late-night events under the next day's results too,
+    // causing the same event to appear on two consecutive days.
+    const dateFiltered = allEvents.filter(ev => {
+      if (!ev.startIso) return true;
+      const evDate = new Date(ev.startIso)
+        .toLocaleDateString('sv-SE', { timeZone: 'Atlantic/Reykjavik' });
+      return evDate === dateStr;
+    });
+
+    console.log(`Viaplay live sports events: ${dateFiltered.length} (filtered from ${allEvents.length})`);
+    return dateFiltered;
   } catch (err) {
     console.error('Viaplay fetch error:', err.message);
     return [];

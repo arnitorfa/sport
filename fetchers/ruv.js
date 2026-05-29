@@ -193,7 +193,13 @@ export async function fetchRuvSchedule(date, fetch) {
       console.log(`RÚV ${channel}: ${events.length} events total`);
       for (const ev of events) {
         const normalized = normalizeEvent(ev, channel);
-        if (normalized) allEvents.push(normalized);
+        if (!normalized) continue;
+        // Only keep events that actually start on the requested date (Reykjavík time).
+        // RÚV's GraphQL API can include post-midnight events in the previous day's results.
+        const evStartDate = new Date(ev.start_time)
+          .toLocaleDateString('sv-SE', { timeZone: 'Atlantic/Reykjavik' });
+        if (evStartDate !== dateStr) continue;
+        allEvents.push(normalized);
       }
     } catch (err) {
       console.error(`RÚV fetch error for ${channel}:`, err.message);
