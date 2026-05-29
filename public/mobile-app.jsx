@@ -112,10 +112,11 @@ function MobileApp({ dark, onThemeChange }) {
     _saveFavTimer.current = setTimeout(async () => {
       const { data: { session } } = await sb.auth.getSession();
       if (!session) return;
-      await sb.from('favorites').upsert(
-        { user_id: session.user.id, subject_keys: [...follows], updated_at: new Date() },
+      const { error } = await sb.from('favorites').upsert(
+        { user_id: session.user.id, subject_keys: [...follows], updated_at: new Date().toISOString() },
         { onConflict: 'user_id' }
       );
+      if (error) console.warn('Supabase favorites save error:', error.message);
     }, 1500);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [follows]);

@@ -210,6 +210,10 @@ function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Always persist favorites to localStorage so they survive page reloads
+  // even when the user is not signed in.
+  React.useEffect(() => writeLS(LS.fav, [...follows]), [follows]);
+
   // Save favorites to Supabase whenever they change (debounced 1.5 s)
   const _saveFavTimer = React.useRef(null);
   React.useEffect(() => {
@@ -219,10 +223,11 @@ function App() {
     _saveFavTimer.current = setTimeout(async () => {
       const { data: { session } } = await sb.auth.getSession();
       if (!session) return;
-      await sb.from('favorites').upsert(
-        { user_id: session.user.id, subject_keys: [...follows], updated_at: new Date() },
+      const { error } = await sb.from('favorites').upsert(
+        { user_id: session.user.id, subject_keys: [...follows], updated_at: new Date().toISOString() },
         { onConflict: 'user_id' }
       );
+      if (error) console.warn('Supabase favorites save error:', error.message);
     }, 1500);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [follows]);
