@@ -10,7 +10,7 @@ window.IF_DATA = (function () {
     { id: 'fb',        name: 'Fótbolti' },
     { id: 'hb',        name: 'Handbolti' },
     { id: 'kb',        name: 'Körfubolti' },
-    { id: 'amfb',      name: 'Ameríska' },
+    { id: 'amfb',      name: 'NFL' },
     { id: 'f1',        name: 'Akstursiþróttir' },
     { id: 'golf',      name: 'Golf' },
     { id: 'mma',       name: 'Bardagaíþróttir' },
@@ -260,13 +260,15 @@ window.IF_DATA = (function () {
           <path d="M14 9.5 C13 12 14 15 13.5 17.5"/>
         `);
       case 'amfb':
-        // American football — oval with laces
         return wrap(`
-          <ellipse cx="12" cy="12" rx="9" ry="6" transform="rotate(-35 12 12)"/>
-          <line x1="7.8" y1="7.8" x2="16.2" y2="16.2"/>
-          <line x1="9.2" y1="11.3" x2="7.5" y2="12.7"/>
-          <line x1="12"  y1="9.8"  x2="10.3" y2="11.2"/>
-          <line x1="14.8" y1="12.8" x2="13.1" y2="14.2"/>
+          <path d="M21.31,6.22c0,8.28-6.71,14.99-14.99,14.99-.37,0-.74-.01-1.11-.04-1.22-.09-2.2-1.08-2.29-2.31-.04-.63-.05-1.27-.02-1.92.41-7.58,6.56-13.73,14.14-14.14.65-.03,1.29-.03,1.92.02,1.22.09,2.22,1.06,2.31,2.29.03.37.04.73.04,1.11z"/>
+          <path d="M6.07,12.76c1.49-3,3.95-5.43,6.97-6.88"/>
+          <line x1="10.04" y1="20.74" x2="3.36" y2="14.06"/>
+          <line x1="20.9"  y1="9.74"  x2="14.36" y2="3.2"/>
+          <line x1="6.32"  y1="10.72" x2="7.5"   y2="11.9"/>
+          <line x1="7.62"  y1="9.02"  x2="8.8"   y2="10.2"/>
+          <line x1="9.12"  y1="7.52"  x2="10.3"  y2="8.7"/>
+          <line x1="10.82" y1="6.22"  x2="12"    y2="7.4"/>
         `);
       case 'chess':
         // King piece — cross on top, crown body, base
