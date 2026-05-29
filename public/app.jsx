@@ -109,20 +109,29 @@ function App() {
 
   // Always fetch today's events on mount so the live panel works even when
   // the user navigates to a different day.
+  // Also fetches yesterday's events to catch midnight-spanning events that
+  // started yesterday but are still live after midnight.
   React.useEffect(() => {
     const todayObj = D.dates.find((d) => d.offset === 0);
+    const yesterdayObj = D.dates.find((d) => d.offset === -1);
     if (!todayObj) return;
-    const fetchToday = () =>
-      fetch(`/api/events?date=${todayObj.isoDate}`)
-        .then((r) => r.json())
-        .then((data) => {
-          const evs = data.events || [];
-          setTodayEvents(evs);
-          // If today is the selected date, also refresh main list and cache
-          setEventsByDate((prev) => ({ ...prev, [todayObj.isoDate]: evs }));
-          setDayCounts((prev) => ({ ...prev, [todayObj.isoDate]: evs.length }));
+    const fetchToday = () => {
+      const fetches = [fetch(`/api/events?date=${todayObj.isoDate}`).then((r) => r.json())];
+      if (yesterdayObj) fetches.push(fetch(`/api/events?date=${yesterdayObj.isoDate}`).then((r) => r.json()).catch(() => ({ events: [] })));
+      Promise.all(fetches)
+        .then(([todayData, yestData]) => {
+          const todayEvs = todayData.events || [];
+          // Midnight-spanning events: yesterday's events that are still live right now
+          const midnightEvs = yestData ? (yestData.events || []).filter((e) => e.status === 'live') : [];
+          // Merge midnight events at the front (they're already live)
+          const merged = [...midnightEvs, ...todayEvs];
+          setTodayEvents(merged);
+          // Keep cache up to date for the selected-date view too
+          setEventsByDate((prev) => ({ ...prev, [todayObj.isoDate]: todayEvs }));
+          setDayCounts((prev) => ({ ...prev, [todayObj.isoDate]: todayEvs.length }));
         })
         .catch(() => {});
+    };
     fetchToday();
     // Auto-refresh today's events every 5 minutes so statuses stay current
     // (events move from live → done as the day progresses).

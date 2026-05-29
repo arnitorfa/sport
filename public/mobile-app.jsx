@@ -36,9 +36,19 @@ function MobileApp({ dark, onThemeChange }) {
 
     const doFetch = (showLoader) => {
       if (showLoader) { setLoadingEvents(true); setEvents([]); }
-      return fetch(`/api/events?date=${d.isoDate}`)
-        .then((r) => r.json())
-        .then((data) => { setEvents(data.events || []); setLoadingEvents(false); })
+      const fetches = [fetch(`/api/events?date=${d.isoDate}`).then((r) => r.json())];
+      // When showing today, also fetch yesterday to catch midnight-spanning live events
+      if (date === 0) {
+        const yest = D.dates.find((x) => x.offset === -1);
+        if (yest) fetches.push(fetch(`/api/events?date=${yest.isoDate}`).then((r) => r.json()).catch(() => ({ events: [] })));
+      }
+      return Promise.all(fetches)
+        .then(([todayData, yestData]) => {
+          const todayEvs = todayData.events || [];
+          const midnightEvs = yestData ? (yestData.events || []).filter((e) => e.status === 'live') : [];
+          setEvents([...midnightEvs, ...todayEvs]);
+          setLoadingEvents(false);
+        })
         .catch(() => setLoadingEvents(false));
     };
 
