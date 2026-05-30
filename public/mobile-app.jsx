@@ -396,7 +396,7 @@ function MobileApp({ dark, onThemeChange }) {
                 opacity: active ? 1 : 0.35, cursor: 'pointer',
                 display: 'flex', alignItems: 'center', fontFamily: 'inherit',
               }}>
-                <StationLogo station={st} size="sm" logoUrl={logoFor(st)} />
+                <StationLogo station={st} size="sm" logoUrl={logoFor(st)} isDark={isDark} />
               </button>
             );
           })}
@@ -415,7 +415,7 @@ function MobileApp({ dark, onThemeChange }) {
           <>
             <MSectionHeader pal={pal} live label="Í beinni núna" count={live.length} />
             {live.map((ev) => (
-              <MEventCard key={ev.id} ev={ev} D={D} pal={pal} live
+              <MEventCard key={ev.id} ev={ev} D={D} pal={pal} isDark={isDark} live
                 stationObj={stationObj} sportObj={sportObj}
                 isStarred={isStarred} logoFor={logoFor} follows={follows}
                 onStarTap={() => setStarSheetFor(ev.id)} />
@@ -429,7 +429,7 @@ function MobileApp({ dark, onThemeChange }) {
               label={isToday ? 'Framundan í dag' : 'Dagskrá'}
               count={upcoming.length} />
             {upcoming.map((ev) => (
-              <MEventCard key={ev.id} ev={ev} D={D} pal={pal}
+              <MEventCard key={ev.id} ev={ev} D={D} pal={pal} isDark={isDark}
                 stationObj={stationObj} sportObj={sportObj}
                 isStarred={isStarred} logoFor={logoFor} follows={follows}
                 onStarTap={() => setStarSheetFor(ev.id)} />
@@ -441,7 +441,7 @@ function MobileApp({ dark, onThemeChange }) {
           <>
             <MSectionHeader pal={pal} label="Liðið" count={done.length} muted />
             {done.map((ev) => (
-              <MEventCard key={ev.id} ev={ev} D={D} pal={pal} done
+              <MEventCard key={ev.id} ev={ev} D={D} pal={pal} isDark={isDark} done
                 stationObj={stationObj} sportObj={sportObj}
                 isStarred={isStarred} logoFor={logoFor} follows={follows}
                 onStarTap={() => setStarSheetFor(ev.id)} />
@@ -604,7 +604,7 @@ function MSectionHeader({ pal, label, count, live, muted }) {
 
 // ── MEventCard ────────────────────────────────────────────────────────────────
 
-function MEventCard({ ev, D, pal, live, done, stationObj, sportObj, isStarred, logoFor, follows, onStarTap }) {
+function MEventCard({ ev, D, pal, isDark, live, done, stationObj, sportObj, isStarred, logoFor, follows, onStarTap }) {
   const st = stationObj(ev.station);
   const sp = sportObj(ev.sport);
   const starred = isStarred(ev);
@@ -665,7 +665,7 @@ function MEventCard({ ev, D, pal, live, done, stationObj, sportObj, isStarred, l
         </span>
         <span style={{ fontSize: 10.5, fontWeight: 700, color: pal.muted,
                        textTransform: 'uppercase', letterSpacing: '0.12em' }}>
-          {sp ? sp.name : ev.sport}{ev.comp ? ` · ${ev.comp}` : ''}
+          {sp ? sp.name : ev.sport}
         </span>
       </div>
 
@@ -678,10 +678,16 @@ function MEventCard({ ev, D, pal, live, done, stationObj, sportObj, isStarred, l
         </div>
       )}
 
-      {/* bottom: station + followed subjects */}
+      {/* bottom: station + channel + followed subjects */}
       <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px dashed ${pal.hair}`,
                     display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        {st && <StationLogo station={st} size="sm" logoUrl={logoFor(st)} />}
+        {st && <StationLogo station={st} size="sm" logoUrl={logoFor(st)} isDark={isDark} />}
+        {ev.channelName && (
+          <span style={{ fontSize: 10.5, fontWeight: 700, color: pal.muted,
+                         letterSpacing: '0.04em' }}>
+            {ev.channelName}
+          </span>
+        )}
         {matchedSubs.length > 0 && (
           <>
             <span style={{ color: pal.muted, fontSize: 10 }}>·</span>

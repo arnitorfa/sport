@@ -113,6 +113,7 @@ function normalizeEvent(ev) {
     endIso: end.toISOString(),
     sport,
     station: 'livey',
+    channelName: 'Lívey',
     title: ev.title,
     sub: ev.streamerName || '',
     comp: ev.streamerName || '',

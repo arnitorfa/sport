@@ -669,7 +669,7 @@ function App() {
     },
     evTitle: { fontSize: isMobile ? 13 : 17, fontWeight: 700, lineHeight: 1.2,
       letterSpacing: '-0.01em' },
-    evSub: { fontSize: isMobile ? 11 : 13, color: pal.muted, marginTop: 3 },
+    evSub: { fontSize: isMobile ? 11 : 14.5, color: isMobile ? pal.muted : pal.fg, marginTop: 3, opacity: isMobile ? 1 : 0.72 },
     followLine: {
       display: 'flex', alignItems: 'center', gap: 6, marginTop: 6,
       fontSize: 11, color: pal.muted, fontWeight: 600
@@ -711,8 +711,6 @@ function App() {
       <>
         <div style={ifS.evMeta}>
           <span>{sp.name}</span>
-          <span style={{ opacity: 0.5 }}>·</span>
-          <span>{ev.comp}</span>
           {sessionType && (
             <span style={{
               padding: '2px 7px', borderRadius: 3, fontSize: 9.5,
@@ -1039,7 +1037,14 @@ function App() {
                 <div style={ifS.liveSub2}>{ev.sub}</div>
                 <div style={{ display: 'flex', alignItems: 'center',
                   justifyContent: 'space-between', marginTop: 4 }}>
-                  <StationLogo station={st} size="sm" logoUrl={logoFor(st)} isDark={isDark} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <StationLogo station={st} size="sm" logoUrl={logoFor(st)} isDark={isDark} />
+                    {ev.channelName && (
+                      <span style={{ fontSize: 10.5, fontWeight: 700, color: pal.muted, letterSpacing: '0.04em' }}>
+                        {ev.channelName}
+                      </span>
+                    )}
+                  </div>
                   <button style={ifS.starBtn(starred)}
                   onClick={(e) => setPopover({ eventId: ev.id, anchor: e.currentTarget })}>
                     <svg width="14" height="14" viewBox="0 0 24 24"
@@ -1050,7 +1055,8 @@ function App() {
                     </svg>
                   </button>
                 </div>
-              </div>);
+              </div>
+            );
 
           })}
         </div>

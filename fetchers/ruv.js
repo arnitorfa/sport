@@ -29,12 +29,14 @@ const SCHEDULE_QUERY = `
 
 // Keywords that identify sports programmes in RÚV's schedule.
 const SPORT_KEYWORDS = {
-  fb:        ['fótbolti', 'knattspyrna', 'premier league', 'champions league',
+  fb:        ['fótbolti', 'fótbolta', 'fótboltinn', 'fótboltans', 'fótboltaleik',
+              'knattspyrna', 'knattspyrnu', 'premier league', 'champions league',
               'besta deild', 'urvalsdeild', 'mls', 'bundesliga', 'la liga',
               'serie a', 'ligue 1', 'allsvenskan', 'eliteserien', 'landsleikur',
               'meistaradeild', 'europa league', 'world cup', 'em í fótbolta',
-              'hm í fótbolta', 'sambandsdeildin', 'lengjudeild'],
-  hb:        ['handbolti', 'handball', 'em í handbolti', 'hm í handbolti'],
+              'hm í fótbolta', 'hm kvenna', 'em kvenna', 'undankeppni hm',
+              'undankeppni em', 'sambandsdeildin', 'lengjudeild', 'nations league'],
+  hb:        ['handbolti', 'handknattleik', 'handball', 'em í handbolti', 'hm í handbolti'],
   kb:        ['körfubolti', 'basketball', 'nba', 'euroleague', 'em í körfubolta'],
   f1:        ['formúla 1', 'formula 1', 'grand prix', 'motogp', 'indycar',
               'mótorsport', 'motorsport', 'nascar', 'rally', 'rallycross',
