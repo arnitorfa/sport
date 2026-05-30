@@ -35,6 +35,7 @@ function App() {
   // ── state ──
   const [theme, setTheme] = React.useState(() => readLS(LS.theme, 'dark'));
   const [date, setDate] = React.useState(0);
+  const [allDates, setAllDates] = React.useState(false);
   // Multi-select sport filter. Empty set = no sport filter ("Allt" highlighted).
   // 'fav' lives in the same set and combines AND-style with other sport ids.
   const [selectedSports, setSelectedSportsRaw] = React.useState(() => new Set());
@@ -201,7 +202,9 @@ function App() {
         setUser(userFromSession(session.user));
         setShowLogin(false);
         loadSupabaseFavs(session.user.id);
-      } else if (event === 'SIGNED_OUT') {
+      } else if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED' && !session) {
+        // Clear local user state — session expired or was invalidated on another device.
+        // Favorites remain in localStorage so they're not lost.
         setUser(null);
       }
     });
@@ -320,6 +323,33 @@ function App() {
     }
     return groups;
   }, [isSearching, debouncedSearch, eventsByDate]);
+
+  // ── all-dates view ──
+  // When allDates is active we show events from every cached date,
+  // applying the same station/sport filters as normal mode.
+  const allDatesGroups = React.useMemo(() => {
+    if (!allDates) return null;
+    const allEvs = Object.entries(eventsByDate)
+      .flatMap(([isoDate, evs]) =>
+        evs
+          .filter((e) => stations.includes(e.station))
+          .filter((e) => !favActive || isStarred(e))
+          .filter((e) => sportIds.length === 0 || sportIds.includes(e.sport))
+          .map((e) => ({ ...e, _isoDate: isoDate }))
+      )
+      .sort((a, b) => (a.startIso || '').localeCompare(b.startIso || ''));
+
+    const groups = [];
+    let lastDate = null;
+    for (const ev of allEvs) {
+      if (ev._isoDate !== lastDate) {
+        lastDate = ev._isoDate;
+        groups.push({ date: ev._isoDate, label: D.formatDateIs(ev._isoDate), events: [] });
+      }
+      groups[groups.length - 1].events.push(ev);
+    }
+    return groups;
+  }, [allDates, eventsByDate, stations, favActive, follows, sportIds]);
 
   // Live panel always reflects what's happening RIGHT NOW (today's events),
   // regardless of which day is selected in the date strip.
@@ -859,12 +889,31 @@ function App() {
 
       {/* ── DATE STRIP ── */}
       <div style={ifS.dateStrip}>
+        {/* "Allar dagsetningar" toggle — same cell format as date buttons */}
+        {(() => {
+          const totalAll = Object.values(dayCounts).reduce((s, n) => s + n, 0);
+          return (
+            <div style={{
+              ...ifS.dateCell(allDates),
+              minWidth: isMobile ? 66 : 72,
+              borderRight: `1px solid ${pal.hair2}`,
+              marginRight: 4,
+              flexShrink: 0,
+            }}
+            onClick={() => { setAllDates((v) => !v); setSearch(''); setDebouncedSearch(''); }}>
+              <div style={ifS.dateCellWk(allDates)}>ALLAR</div>
+              <div style={{ ...ifS.dateCellD, fontSize: isMobile ? 16 : 20, lineHeight: 1.1, marginTop: 2 }}>∞</div>
+              <div style={ifS.dateCellLbl(allDates)}>DAGSET.</div>
+              <div style={ifS.dateCellCount(allDates)}>{totalAll} viðb.</div>
+            </div>
+          );
+        })()}
         {D.dates.map((d) => {
-          const active = d.offset === date;
+          const active = !allDates && d.offset === date;
           const cnt = dayCounts[d.isoDate] !== undefined ? dayCounts[d.isoDate] : '·';
           return (
             <div key={d.offset} style={ifS.dateCell(active)}
-            onClick={() => { setDate(d.offset); setSearch(''); setDebouncedSearch(''); }}>
+            onClick={() => { setAllDates(false); setDate(d.offset); setSearch(''); setDebouncedSearch(''); }}>
               <div style={ifS.dateCellWk(active)}>{d.weekday}</div>
               <div style={ifS.dateCellD}>{String(d.day).padStart(2, '0')}</div>
               {d.label ?
@@ -1050,6 +1099,41 @@ function App() {
                 </div>
               );
             };
+
+            // ── ALL-DATES MODE ─────────────────────────────────────────────
+            if (allDates && !isSearching) {
+              const totalHits = allDatesGroups ? allDatesGroups.reduce((n, g) => n + g.events.length, 0) : 0;
+              return (
+                <>
+                  <div style={{ ...ifS.sectionHd, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{ fontSize: 16, lineHeight: 1 }}>∞</span>
+                    Allar dagsetningar
+                    {totalHits > 0 && (
+                      <span style={{ fontSize: 10, fontWeight: 700, color: pal.muted,
+                        fontFamily: '"JetBrains Mono", monospace' }}>
+                        {totalHits} viðburðir
+                      </span>
+                    )}
+                  </div>
+                  {(!allDatesGroups || totalHits === 0) && (
+                    <div style={ifS.timelineEmpty}>Engir viðburðir fundust með þessum síum.</div>
+                  )}
+                  {allDatesGroups && allDatesGroups.map((group) => (
+                    <div key={group.date}>
+                      <div style={{
+                        fontSize: 11, fontWeight: 700, textTransform: 'capitalize',
+                        letterSpacing: '0.10em', color: pal.muted,
+                        padding: '14px 0 4px', borderTop: `1px solid ${pal.hair2}`,
+                        marginTop: 8
+                      }}>
+                        {group.label}
+                      </div>
+                      {group.events.map(renderEvRow)}
+                    </div>
+                  ))}
+                </>
+              );
+            }
 
             // ── SEARCH MODE ────────────────────────────────────────────────
             if (isSearching) {
