@@ -123,6 +123,87 @@ const MATCHES = [
 const GROUPS = ['A','B','C','D','E','F','G','H','I','J','K','L'];
 const KO_LABELS = {r32:'32 LIÐA ÚRSLIT',r16:'16 LIÐA ÚRSLIT',qf:'FJÓRÐUNGSÚRSLIT',sf:'HÁLFLEIKIR',tp:'LEIKUR UM 3. SÆTI',final:'LOKALEIKUR'};
 
+// ── Countries & TV channels per match ─────────────────────────────────────────
+const COUNTRIES = [
+  { code:'is', flag:'🇮🇸', name:'Ísland',      station:'RÚV' },
+  { code:'uk', flag:'🇬🇧', name:'Bretland',     station:'BBC / ITV' },
+  { code:'se', flag:'🇸🇪', name:'Svíþjóð',      station:'SVT / TV4' },
+  { code:'no', flag:'🇳🇴', name:'Noregur',      station:'NRK / TV 2' },
+  { code:'us', flag:'🇺🇸', name:'Bandaríkin',   station:'FOX / FS1' },
+];
+
+// Per-match channel lookup. Keys = match.id.
+// IS determined dynamically from /api/events (channelMap state).
+// US: all matches on FOX/FS1 or Telemundo (handled in getChannel).
+// Sources: live-footballontv.com (UK), SVT/TV4 ICS calendar (SE), NRK/TV2 ICS calendar (NO).
+const CH = {
+  uk: {
+    1:'ITV',  2:'ITV',  3:'BBC',  4:'BBC',  5:'ITV',  6:'BBC',
+    7:'BBC',  8:'ITV',  9:'ITV',  10:'ITV', 11:'BBC', 12:'ITV',
+    13:'ITV', 14:'BBC', 15:'ITV', 16:'BBC', 17:'BBC', 18:'BBC',
+    19:'ITV', 20:'BBC', 21:'BBC', 22:'ITV', 23:'ITV', 24:'BBC',
+    25:'BBC', 26:'ITV', 27:'ITV', 28:'BBC', 29:'BBC', 30:'ITV',
+    31:'ITV', 32:'ITV', 33:'BBC', 34:'ITV', 35:'BBC', 36:'BBC',
+    37:'BBC', 38:'ITV', 39:'BBC', 40:'ITV', 41:'BBC', 42:'BBC',
+    43:'ITV', 44:'ITV', 45:'ITV', 46:'BBC', 47:'BBC', 48:'ITV',
+    49:'ITV', 50:'ITV', 51:'BBC', 52:'BBC', 53:'BBC', 54:'BBC',
+    55:'BBC', 56:'BBC', 57:'BBC', 58:'BBC', 59:'ITV', 60:'ITV',
+    61:'ITV', 62:'ITV', 63:'ITV', 64:'ITV', 65:'BBC', 66:'BBC',
+    67:'ITV', 68:'ITV', 69:'BBC', 70:'BBC', 71:'BBC', 72:'BBC',
+  },
+  se: {
+    1:'TV4',  2:'TV4',  3:'SVT1', 4:'TV4',  5:'TV4',  6:'SVT1',
+    7:'SVT1', 8:'TV4',  9:'TV4',  10:'TV4', 11:'TV4', 12:'SVT1',
+    13:'SVT1',14:'SVT1',15:'TV4', 16:'TV4', 17:'SVT1',18:'TV4',
+    19:'TV4', 20:'TV4', 21:'TV4', 22:'TV4', 23:'TV4', 24:'TV4',
+    25:'TV4', 26:'TV4', 27:'TV4', 28:'TV4', 29:'SVT2',30:'SVT1',
+    31:'TV4', 32:'TV4', 33:'TV4', 34:'TV4', 35:'TV4', 36:'SVT1',
+    37:'TV4', 38:'TV4', 39:'TV4', 40:'TV4', 41:'SVT1',42:'SVT1',
+    43:'SVT1',44:'TV4', 45:'SVT1',46:'SVT1',47:'TV4', 48:'TV4',
+    49:'TV4', 50:'TV4', 51:'TV4', 52:'TV4', 53:'SVT1',54:'SVT2',
+    55:'SVT1',56:'SVT1',57:'SVT2',58:'SVT1',59:'TV4', 60:'TV4',
+    61:'TV4', 62:'TV4', 63:'TV4', 64:'TV4', 65:'TV4', 66:'TV4',
+    67:'SVT1',68:'SVT2',69:'TV4', 70:'TV4', 71:'TV4', 72:'TV4',
+    // Knockouts (SVT/TV4 ICS)
+    73:'TV4', 74:'SVT', 75:'SVT', 76:'TV4', 77:'TV4', 78:'TV4',
+    79:'TV4', 80:'SVT', 81:'TV4', 82:'TV4', 83:'TV4', 84:'SVT',
+    85:'TV4', 86:'SVT', 87:'SVT', 88:'TV4',
+    89:'SVT', 90:'TV4', 91:'TV4', 92:'SVT', 93:'TV4', 94:'TV4',
+    95:'TV4', 96:'SVT',
+    97:'TV4', 98:'SVT', 99:'TV4', 100:'SVT',
+    101:'SVT',102:'TV4',103:'SVT',104:'TV4',
+  },
+  no: {
+    1:'TV 2', 2:'NRK',  3:'NRK',  4:'TV 2', 5:'NRK',  6:'TV 2',
+    7:'TV 2', 8:'TV 2', 9:'NRK',  10:'TV 2',11:'TV 2',12:'TV 2',
+    13:'TV 2',14:'NRK', 15:'NRK', 16:'NRK', 17:'TV 2',18:'TV 2',
+    19:'NRK', 20:'NRK', 21:'NRK', 22:'TV 2',23:'TV 2',24:'TV 2',
+    25:'NRK', 26:'TV 2',27:'TV 2',28:'TV 2',29:'NRK', 30:'NRK',
+    31:'NRK', 32:'NRK', 33:'NRK', 34:'TV 2',35:'TV 2',36:'NRK',
+    37:'NRK', 38:'TV 2',39:'TV 2',40:'TV 2',41:'TV 2',42:'NRK',
+    43:'NRK', 44:'TV 2',45:'TV 2',46:'NRK', 47:'NRK', 48:'TV 2',
+    49:'NRK', 50:'NRK', 51:'NRK', 52:'NRK', 53:'TV 2',54:'TV 2',
+    55:'TV 2',56:'TV 2',57:'TV 2',58:'TV 2',59:'NRK', 60:'NRK',
+    61:'NRK', 62:'NRK', 63:'NRK', 64:'NRK', 65:'TV 2',66:'TV 2',
+    67:'TV 2',68:'TV 2',69:'NRK', 70:'NRK', 71:'NRK', 72:'NRK',
+    // Knockouts (NRK/TV2 ICS)
+    73:'TV 2',74:'NRK', 75:'NRK', 76:'TV 2',77:'TV 2',78:'TV 2',
+    79:'TV 2',80:'NRK', 81:'TV 2',82:'TV 2',83:'TV 2',84:'NRK',
+    85:'TV 2',86:'NRK', 87:'NRK', 88:'TV 2',
+    89:'NRK', 90:'TV 2',91:'TV 2',92:'NRK', 93:'TV 2',94:'TV 2',
+    95:'TV 2',96:'NRK',
+    97:'TV 2',98:'NRK', 99:'TV 2',100:'NRK',
+    101:'TV 2',102:'TV 2',103:'NRK',104:'NRK',
+  },
+};
+
+function getChannel(matchId, country, channelMap) {
+  if (country === 'is') return channelMap[matchId] || 'RÚV';
+  if (country === 'us') return 'FOX / FS1';
+  if (country === 'uk' && (matchId >= 73)) return 'BBC / ITV';
+  return CH[country]?.[matchId] || '–';
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const TZ = 'Atlantic/Reykjavik';
 // 24h time, no AM/PM, no "kl."
@@ -145,15 +226,6 @@ function matchStatus(iso, round) {
   return 'upcoming';
 }
 
-function cdStr(iso) {
-  const diff = new Date(iso).getTime() - Date.now();
-  if (diff <= 0) return null;
-  const d=Math.floor(diff/86400000), h=Math.floor((diff%86400000)/3600000), mn=Math.floor((diff%3600000)/60000);
-  if (d>0) return `${d}d ${h}klst`;
-  if (h>0) return `${h}klst ${mn}mín`;
-  return `${mn}mín`;
-}
-
 // ── Main component ────────────────────────────────────────────────────────────
 function WCApp({ mobile, dark, onThemeChange }) {
   const isDark = dark;
@@ -163,6 +235,13 @@ function WCApp({ mobile, dark, onThemeChange }) {
   const [search, setSearch] = React.useState('');
   const [, tick] = React.useState(0);
   const [channelMap, setChannelMap] = React.useState({}); // matchId → 'RÚV' | 'RÚV 2'
+  const [country, setCountry] = React.useState(() => {
+    try { return localStorage.getItem('wc_country') || 'is'; } catch(e) { return 'is'; }
+  });
+  const handleCountry = c => {
+    setCountry(c);
+    try { localStorage.setItem('wc_country', c); } catch(e) {}
+  };
 
   React.useEffect(() => {
     const t = setInterval(() => tick(n => n+1), 30000);
@@ -346,6 +425,14 @@ function WCApp({ mobile, dark, onThemeChange }) {
     evStation:{ display:'flex', flexDirection:'column', alignItems:'center',
       gap:3, flexShrink:0 },
 
+    // Country selector
+    countrySel:{ height:36, padding:'0 10px', borderRadius:10, cursor:'pointer',
+      background:pal.card, border:`1px solid ${pal.hair}`, color:pal.fg,
+      fontSize:13, fontFamily:'inherit', fontWeight:600, flexShrink:0,
+      outline:'none', appearance:'none', WebkitAppearance:'none',
+      paddingRight:28, backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%23${isDark?'9CA3AF':'6B7280'}' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E")`,
+      backgroundRepeat:'no-repeat', backgroundPosition:'right 10px center' },
+
     // Live pane
     liveHd:{ display:'flex', alignItems:'center', gap:8, marginBottom:16 },
     liveDotBig:{ width:8, height:8, borderRadius:'50%', background:'#FF3B47',
@@ -369,19 +456,29 @@ function WCApp({ mobile, dark, onThemeChange }) {
       borderRadius:8, padding:'6px 12px', fontSize:12, fontWeight:600 },
   };
 
-  // ── RÚV station display ───────────────────────────────────────────────────────
-  function RuvBadge({ channel }) {
-    const ch = channel || 'RÚV';
-    const logoFile = isDark ? 'ruv-dark.svg' : 'ruv-black.svg';
+  // ── Channel badge — adapts to selected country ────────────────────────────────
+  function ChannelBadge({ matchId }) {
+    const ch = getChannel(matchId, country, channelMap);
+    if (country === 'is') {
+      // Iceland: show RÚV logo image
+      const logoFile = isDark ? 'ruv-dark.svg' : 'ruv-black.svg';
+      return (
+        <div style={S.evStation}>
+          <img src={`assets/logos/${logoFile}`} alt={ch}
+            style={{ height:16, width:'auto', maxWidth:48, display:'block' }}/>
+          <span style={{ fontSize:9.5, fontWeight:800, color:pal.muted,
+            letterSpacing:'0.06em', fontFamily:'"JetBrains Mono",monospace' }}>
+            {ch}
+          </span>
+        </div>
+      );
+    }
+    // Other countries: text badge
     return (
       <div style={S.evStation}>
-        <img
-          src={`assets/logos/${logoFile}`}
-          alt={ch}
-          style={{ height:16, width:'auto', maxWidth:48, display:'block' }}
-        />
-        <span style={{ fontSize:9.5, fontWeight:800, color:pal.muted,
-          letterSpacing:'0.06em', fontFamily:'"JetBrains Mono",monospace' }}>
+        <span style={{ fontSize:10, fontWeight:800, color:pal.badgeColor,
+          letterSpacing:'0.06em', fontFamily:'"JetBrains Mono",monospace',
+          textAlign:'center', lineHeight:1.3, whiteSpace:'nowrap' }}>
           {ch}
         </span>
       </div>
@@ -393,8 +490,6 @@ function WCApp({ mobile, dark, onThemeChange }) {
     const status  = matchStatus(match.iso, match.round);
     const start   = fmt24(match.iso);
     const end     = fmt24(endTime(match.iso, match.round).toISOString());
-    const cd      = status === 'upcoming' ? cdStr(match.iso) : null;
-    const channel = channelMap[match.id]; // undefined = unknown yet
     const isGroup = match.round === 'group';
 
     return (
@@ -407,7 +502,6 @@ function WCApp({ mobile, dark, onThemeChange }) {
               color: status === 'live' ? '#FF3B47' : status === 'done' ? pal.muted : pal.fg
             }}>{start}</span>
             <span style={S.evTimeEnd}>til {end}</span>
-            {cd && <span style={{ fontSize:9.5, color:pal.muted, marginTop:1 }}>{cd}</span>}
           </div>
 
           {/* ICON */}
@@ -451,7 +545,7 @@ function WCApp({ mobile, dark, onThemeChange }) {
           </div>
 
           {/* STATION */}
-          <RuvBadge channel={channel} />
+          <ChannelBadge matchId={match.id} />
         </div>
       </div>
     );
@@ -570,6 +664,18 @@ function WCApp({ mobile, dark, onThemeChange }) {
             <div style={{fontSize:10,color:pal.muted,letterSpacing:'0.10em',marginTop:4}}>11. JÚN – 19. JÚL · USA / KANADA / MEXÍKÓ · RÚV</div>
           </div>
         )}
+        {/* Country selector */}
+        <select
+          style={S.countrySel}
+          value={country}
+          onChange={e => handleCountry(e.target.value)}
+          title="Veldu land"
+        >
+          {COUNTRIES.map(c => (
+            <option key={c.code} value={c.code}>{c.flag} {c.name}</option>
+          ))}
+        </select>
+
         <div style={{...S.searchWrap}}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={pal.muted} strokeWidth="2" strokeLinecap="round">
             <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>
@@ -618,7 +724,9 @@ function WCApp({ mobile, dark, onThemeChange }) {
         {!mobile && (
           <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'flex-end',
             padding:'0 32px',color:pal.muted,fontSize:11}}>
-            <span style={{fontWeight:700,letterSpacing:'0.08em'}}>48 ÞJÓÐIR · 104 LEIKIR · RÚV</span>
+            <span style={{fontWeight:700,letterSpacing:'0.08em'}}>
+              48 ÞJÓÐIR · 104 LEIKIR · {COUNTRIES.find(c=>c.code===country)?.station||'RÚV'}
+            </span>
           </div>
         )}
       </div>
@@ -673,7 +781,15 @@ function WCApp({ mobile, dark, onThemeChange }) {
            tab==='group' ? <GroupView/> :
            <KoView/>}
           <div style={{textAlign:'center',marginTop:32,color:pal.muted,fontSize:11,padding:mobile?'0 16px 16px':'0 32px 16px'}}>
-            RÚV hefur sýningarrétt á öllum 104 leikjum HM 2026
+            {(() => {
+              const c = COUNTRIES.find(x=>x.code===country);
+              if (country==='is') return 'RÚV hefur sýningarrétt á öllum 104 leikjum HM 2026';
+              if (country==='uk') return 'BBC og ITV deila réttindum á öllum 104 leikjum í Bretlandi';
+              if (country==='se') return 'SVT og TV4 deila réttindum á öllum 104 leikjum í Svíþjóð';
+              if (country==='no') return 'NRK og TV 2 deila réttindum á öllum 104 leikjum í Noregi';
+              if (country==='us') return 'FOX/FS1 (enska) og Telemundo (spænska) sýna alla 104 leiki í Bandaríkjunum';
+              return '';
+            })()}
           </div>
         </div>
       </div>
