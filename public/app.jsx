@@ -469,11 +469,11 @@ function App() {
       borderBottom: `1px solid ${pal.hair}`,
       scrollbarWidth: 'none', msOverflowStyle: 'none',
     } : {
-      display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)',
+      display: 'grid', gridTemplateColumns: 'repeat(11, 1fr)',
       borderBottom: `1px solid ${pal.hair}`
     },
     dateCell: (active) => ({
-      padding: isMobile ? '10px 8px 8px' : '14px 10px 12px',
+      padding: isMobile ? '10px 8px 8px' : '10px 6px 9px',
       minWidth: isMobile ? 58 : undefined,
       flexShrink: 0,
       cursor: 'pointer',
@@ -487,7 +487,7 @@ function App() {
       letterSpacing: '0.14em', opacity: active ? 0.85 : 0.5,
       fontWeight: 700
     }),
-    dateCellD: { fontSize: isMobile ? 18 : 22, fontWeight: 700, marginTop: 3,
+    dateCellD: { fontSize: isMobile ? 18 : 19, fontWeight: 700, marginTop: 2,
       fontFamily: '"JetBrains Mono", monospace',
       letterSpacing: '-0.02em', lineHeight: 1 },
     dateCellLbl: (active) => ({
@@ -895,9 +895,9 @@ function App() {
           return (
             <div style={{
               ...ifS.dateCell(allDates),
-              minWidth: isMobile ? 66 : 72,
+              minWidth: isMobile ? 66 : undefined,
               borderRight: `1px solid ${pal.hair2}`,
-              marginRight: 4,
+              marginRight: isMobile ? 4 : 0,
               flexShrink: 0,
             }}
             onClick={() => { setAllDates((v) => !v); setSearch(''); setDebouncedSearch(''); }}>
