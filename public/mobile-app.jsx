@@ -166,13 +166,13 @@ function MobileApp({ dark, onThemeChange }) {
 
   // ── palette ─────────────────────────────────────────────────────────────────
   const pal = isDark ? {
-    bg: '#08080A', fg: '#F4F4F5', card: '#121215', card2: '#1A1A1E',
-    hair: '#202024', hair2: '#2C2C30', muted: '#7B7B82',
+    bg: '#222222', fg: '#F4F4F5', card: '#2A2A2A', card2: '#2E2E2E',
+    hair: '#333333', hair2: '#3C3C3C', muted: '#7B7B82',
     accent: '#C8FF3D', accentFg: '#0A0A0B', accentSoft: 'rgba(200,255,61,0.13)',
     liveAccent: '#FF3B47', liveSoft: 'rgba(255,59,71,0.16)',
   } : {
-    bg: '#FFFFFF', fg: '#0A0A0B', card: '#FAFAF8', card2: '#FFFFFF',
-    hair: '#E7E5E1', hair2: '#D8D6D1', muted: '#76736C',
+    bg: '#F4F3F0', fg: '#0A0A0B', card: '#ECEAE6', card2: '#F4F3F0',
+    hair: '#D8D6D2', hair2: '#CBC9C4', muted: '#76736C',
     accent: '#F26419', accentFg: '#FFFFFF', accentSoft: 'rgba(242,100,25,0.13)',
     liveAccent: '#E63946', liveSoft: 'rgba(230,57,70,0.13)',
   };

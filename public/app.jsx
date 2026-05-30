@@ -243,7 +243,7 @@ function App() {
   // the fixed-width 1400px canvas blend in (otherwise the dark default body
   // would show as black bars on either side of the page in light mode).
   React.useEffect(() => {
-    const bg = theme === 'dark' ? '#08080A' : '#FFFFFF';
+    const bg = theme === 'dark' ? '#222222' : '#F4F3F0';
     document.body.style.background = bg;
   }, [theme]);
 
@@ -383,15 +383,15 @@ function App() {
   // ── theme palette (also exposed as CSS vars) ──
   const isDark = theme === 'dark';
   const pal = isDark ? {
-    bg: '#08080A', fg: '#F4F4F5', card: '#121215', card2: '#1A1A1E',
-    hair: '#202024', hair2: '#2C2C30', muted: '#7B7B82',
+    bg: '#222222', fg: '#F4F4F5', card: '#2A2A2A', card2: '#2E2E2E',
+    hair: '#333333', hair2: '#3C3C3C', muted: '#7B7B82',
     accent: '#C8FF3D', accentFg: '#0A0A0B', accentSoft: 'rgba(200,255,61,0.13)',
-    panelBg: '#0B0B0D'
+    panelBg: '#171717'
   } : {
-    bg: '#FFFFFF', fg: '#0A0A0B', card: '#FAFAF8', card2: '#FFFFFF',
-    hair: '#E7E5E1', hair2: '#D8D6D1', muted: '#76736C',
+    bg: '#F4F3F0', fg: '#0A0A0B', card: '#ECEAE6', card2: '#F4F3F0',
+    hair: '#D8D6D2', hair2: '#CBC9C4', muted: '#76736C',
     accent: '#F26419', accentFg: '#FFFFFF', accentSoft: 'rgba(242,100,25,0.12)',
-    panelBg: '#F5F4F1'
+    panelBg: '#E5E3DF'
   };
 
   const cssVars = {
@@ -655,7 +655,7 @@ function App() {
     evIcon: {
       width: isMobile ? 36 : 60, height: isMobile ? 36 : 60,
       borderRadius: isMobile ? 8 : 12,
-      background: isDark ? '#1F1F22' : '#FFFFFF',
+      background: isDark ? '#2A2A2A' : '#ECEAE6',
       border: `1px solid ${pal.hair2}`,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       color: pal.fg, flexShrink: 0
@@ -1002,7 +1002,7 @@ function App() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div style={{
                     width: 30, height: 30, borderRadius: 8,
-                    background: isDark ? '#1F1F22' : '#FFFFFF',
+                    background: isDark ? '#2A2A2A' : '#ECEAE6',
                     border: `1px solid ${pal.hair2}`,
                     display: 'flex', alignItems: 'center',
                     justifyContent: 'center', color: pal.fg
