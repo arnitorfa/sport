@@ -8,128 +8,128 @@ const mk = (id,iso,home,away,group,venue,round) =>
   ({id,iso,home,away,group:group||null,venue,round:round||'group'});
 
 const MATCHES = [
-  mk(1, '2026-06-11T19:00:00Z','Mexíkó','Suður-Afríka','A','Mexico City'),
-  mk(2, '2026-06-12T02:00:00Z','Suður-Kórea','Tékkland','A','Guadalajara'),
-  mk(25,'2026-06-18T16:00:00Z','Suður-Afríka','Tékkland','A','Atlanta'),
-  mk(28,'2026-06-19T01:00:00Z','Mexíkó','Suður-Kórea','A','Guadalajara'),
-  mk(53,'2026-06-25T01:00:00Z','Mexíkó','Tékkland','A','Mexico City'),
-  mk(54,'2026-06-25T01:00:00Z','Suður-Kórea','Suður-Afríka','A','Monterrey'),
-  mk(3, '2026-06-12T19:00:00Z','Kanada','Bosnía og Hersegóvína','B','Toronto'),
-  mk(5, '2026-06-13T19:00:00Z','Katar','Sviss','B','San Francisco'),
-  mk(26,'2026-06-18T19:00:00Z','Sviss','Bosnía og Hersegóvína','B','Los Angeles'),
-  mk(27,'2026-06-18T22:00:00Z','Kanada','Katar','B','Vancouver'),
-  mk(49,'2026-06-24T19:00:00Z','Kanada','Sviss','B','Vancouver'),
-  mk(50,'2026-06-24T19:00:00Z','Katar','Bosnía og Hersegóvína','B','Seattle'),
-  mk(6, '2026-06-13T22:00:00Z','Brasilía','Marokkó','C','New York/NJ'),
-  mk(7, '2026-06-14T01:00:00Z','Haítí','Skotland','C','Boston'),
-  mk(30,'2026-06-19T19:00:00Z','Skotland','Marokkó','C','Boston'),
-  mk(31,'2026-06-20T01:00:00Z','Brasilía','Haítí','C','Philadelphia'),
-  mk(51,'2026-06-24T22:00:00Z','Skotland','Brasilía','C','Miami'),
-  mk(52,'2026-06-24T22:00:00Z','Marokkó','Haítí','C','Atlanta'),
-  mk(4, '2026-06-13T01:00:00Z','Bandaríkin','Paragvæ','D','Los Angeles'),
-  mk(8, '2026-06-14T04:00:00Z','Ástralía','Tyrkland','D','Vancouver'),
-  mk(29,'2026-06-19T19:00:00Z','Bandaríkin','Ástralía','D','Seattle'),
-  mk(32,'2026-06-20T04:00:00Z','Paragvæ','Tyrkland','D','San Francisco'),
-  mk(59,'2026-06-26T02:00:00Z','Bandaríkin','Tyrkland','D','Los Angeles'),
-  mk(60,'2026-06-26T02:00:00Z','Paragvæ','Ástralía','D','San Francisco'),
-  mk(9, '2026-06-14T17:00:00Z','Þýskaland','Curaçao','E','Houston'),
-  mk(11,'2026-06-14T23:00:00Z','Fílabeinsströndin','Ekvador','E','Philadelphia'),
-  mk(34,'2026-06-20T20:00:00Z','Þýskaland','Fílabeinsströndin','E','Toronto'),
-  mk(35,'2026-06-21T00:00:00Z','Ekvador','Curaçao','E','Kansas City'),
-  mk(55,'2026-06-25T20:00:00Z','Ekvador','Þýskaland','E','New York/NJ'),
-  mk(56,'2026-06-25T20:00:00Z','Curaçao','Fílabeinsströndin','E','Philadelphia'),
-  mk(10,'2026-06-14T20:00:00Z','Holland','Japan','F','Dallas'),
-  mk(12,'2026-06-15T02:00:00Z','Túnis','Svíþjóð','F','Monterrey'),
-  mk(33,'2026-06-20T17:00:00Z','Holland','Svíþjóð','F','Houston'),
-  mk(36,'2026-06-21T04:00:00Z','Túnis','Japan','F','Monterrey'),
-  mk(57,'2026-06-25T23:00:00Z','Túnis','Holland','F','Kansas City'),
-  mk(58,'2026-06-25T23:00:00Z','Japan','Svíþjóð','F','Dallas'),
-  mk(14,'2026-06-15T19:00:00Z','Belgía','Egyptaland','G','Seattle'),
-  mk(16,'2026-06-16T01:00:00Z','Íran','Nýja-Sjáland','G','Los Angeles'),
-  mk(38,'2026-06-21T19:00:00Z','Belgía','Íran','G','Los Angeles'),
-  mk(40,'2026-06-22T01:00:00Z','Nýja-Sjáland','Egyptaland','G','Vancouver'),
-  mk(65,'2026-06-27T03:00:00Z','Nýja-Sjáland','Belgía','G','Vancouver'),
-  mk(66,'2026-06-27T03:00:00Z','Egyptaland','Íran','G','Seattle'),
-  mk(13,'2026-06-15T16:00:00Z','Spánn','Grænhöfðaeyjar','H','Atlanta'),
-  mk(15,'2026-06-15T22:00:00Z','Sádi-Arabía','Úrúgvæ','H','Miami'),
-  mk(37,'2026-06-21T16:00:00Z','Spánn','Sádi-Arabía','H','Atlanta'),
-  mk(39,'2026-06-21T22:00:00Z','Úrúgvæ','Grænhöfðaeyjar','H','Miami'),
-  mk(63,'2026-06-27T00:00:00Z','Úrúgvæ','Spánn','H','Guadalajara'),
-  mk(64,'2026-06-27T00:00:00Z','Grænhöfðaeyjar','Sádi-Arabía','H','Houston'),
-  mk(17,'2026-06-16T19:00:00Z','Frakkland','Senegal','I','New York/NJ'),
-  mk(18,'2026-06-16T22:00:00Z','Noregur','Írak','I','Boston'),
-  mk(42,'2026-06-22T21:00:00Z','Frakkland','Írak','I','Philadelphia'),
-  mk(43,'2026-06-23T00:00:00Z','Noregur','Senegal','I','New York/NJ'),
-  mk(61,'2026-06-26T19:00:00Z','Noregur','Frakkland','I','Boston'),
-  mk(62,'2026-06-26T19:00:00Z','Senegal','Írak','I','Toronto'),
-  mk(19,'2026-06-17T01:00:00Z','Argentína','Alsír','J','Kansas City'),
-  mk(20,'2026-06-17T04:00:00Z','Austurríki','Jórdanía','J','San Francisco'),
-  mk(41,'2026-06-22T17:00:00Z','Argentína','Austurríki','J','Dallas'),
-  mk(44,'2026-06-23T03:00:00Z','Jórdanía','Alsír','J','San Francisco'),
-  mk(71,'2026-06-28T02:00:00Z','Jórdanía','Argentína','J','Dallas'),
-  mk(72,'2026-06-28T02:00:00Z','Alsír','Austurríki','J','Kansas City'),
-  mk(21,'2026-06-17T17:00:00Z','Portúgal','Kongó (DR)','K','Houston'),
-  mk(24,'2026-06-18T02:00:00Z','Úsbekistan','Kólumbía','K','Mexico City'),
-  mk(45,'2026-06-23T17:00:00Z','Portúgal','Úsbekistan','K','Houston'),
-  mk(48,'2026-06-24T02:00:00Z','Kólumbía','Kongó (DR)','K','Guadalajara'),
-  mk(69,'2026-06-27T23:30:00Z','Kólumbía','Portúgal','K','Miami'),
-  mk(70,'2026-06-27T23:30:00Z','Úsbekistan','Kongó (DR)','K','Atlanta'),
-  mk(22,'2026-06-17T20:00:00Z','England','Króatía','L','Dallas'),
-  mk(23,'2026-06-17T23:00:00Z','Gana','Panama','L','Toronto'),
-  mk(46,'2026-06-23T20:00:00Z','England','Gana','L','Boston'),
-  mk(47,'2026-06-23T23:00:00Z','Panama','Króatía','L','Toronto'),
+  mk(1, '2026-06-11T19:00:00Z','Mexico','South Africa','A','Mexico City'),
+  mk(2, '2026-06-12T02:00:00Z','South Korea','Czech Republic','A','Guadalajara'),
+  mk(25,'2026-06-18T16:00:00Z','South Africa','Czech Republic','A','Atlanta'),
+  mk(28,'2026-06-19T01:00:00Z','Mexico','South Korea','A','Guadalajara'),
+  mk(53,'2026-06-25T01:00:00Z','Mexico','Czech Republic','A','Mexico City'),
+  mk(54,'2026-06-25T01:00:00Z','South Korea','South Africa','A','Monterrey'),
+  mk(3, '2026-06-12T19:00:00Z','Canada','Bosnia-Herzegovina','B','Toronto'),
+  mk(5, '2026-06-13T19:00:00Z','Qatar','Switzerland','B','San Francisco'),
+  mk(26,'2026-06-18T19:00:00Z','Switzerland','Bosnia-Herzegovina','B','Los Angeles'),
+  mk(27,'2026-06-18T22:00:00Z','Canada','Qatar','B','Vancouver'),
+  mk(49,'2026-06-24T19:00:00Z','Canada','Switzerland','B','Vancouver'),
+  mk(50,'2026-06-24T19:00:00Z','Qatar','Bosnia-Herzegovina','B','Seattle'),
+  mk(6, '2026-06-13T22:00:00Z','Brazil','Morocco','C','New York/NJ'),
+  mk(7, '2026-06-14T01:00:00Z','Haiti','Scotland','C','Boston'),
+  mk(30,'2026-06-19T19:00:00Z','Scotland','Morocco','C','Boston'),
+  mk(31,'2026-06-20T01:00:00Z','Brazil','Haiti','C','Philadelphia'),
+  mk(51,'2026-06-24T22:00:00Z','Scotland','Brazil','C','Miami'),
+  mk(52,'2026-06-24T22:00:00Z','Morocco','Haiti','C','Atlanta'),
+  mk(4, '2026-06-13T01:00:00Z','USA','Paraguay','D','Los Angeles'),
+  mk(8, '2026-06-14T04:00:00Z','Australia','Turkey','D','Vancouver'),
+  mk(29,'2026-06-19T19:00:00Z','USA','Australia','D','Seattle'),
+  mk(32,'2026-06-20T04:00:00Z','Paraguay','Turkey','D','San Francisco'),
+  mk(59,'2026-06-26T02:00:00Z','USA','Turkey','D','Los Angeles'),
+  mk(60,'2026-06-26T02:00:00Z','Paraguay','Australia','D','San Francisco'),
+  mk(9, '2026-06-14T17:00:00Z','Germany','Curaçao','E','Houston'),
+  mk(11,'2026-06-14T23:00:00Z','Ivory Coast','Ecuador','E','Philadelphia'),
+  mk(34,'2026-06-20T20:00:00Z','Germany','Ivory Coast','E','Toronto'),
+  mk(35,'2026-06-21T00:00:00Z','Ecuador','Curaçao','E','Kansas City'),
+  mk(55,'2026-06-25T20:00:00Z','Ecuador','Germany','E','New York/NJ'),
+  mk(56,'2026-06-25T20:00:00Z','Curaçao','Ivory Coast','E','Philadelphia'),
+  mk(10,'2026-06-14T20:00:00Z','Netherlands','Japan','F','Dallas'),
+  mk(12,'2026-06-15T02:00:00Z','Tunisia','Sweden','F','Monterrey'),
+  mk(33,'2026-06-20T17:00:00Z','Netherlands','Sweden','F','Houston'),
+  mk(36,'2026-06-21T04:00:00Z','Tunisia','Japan','F','Monterrey'),
+  mk(57,'2026-06-25T23:00:00Z','Tunisia','Netherlands','F','Kansas City'),
+  mk(58,'2026-06-25T23:00:00Z','Japan','Sweden','F','Dallas'),
+  mk(14,'2026-06-15T19:00:00Z','Belgium','Egypt','G','Seattle'),
+  mk(16,'2026-06-16T01:00:00Z','Iran','New Zealand','G','Los Angeles'),
+  mk(38,'2026-06-21T19:00:00Z','Belgium','Iran','G','Los Angeles'),
+  mk(40,'2026-06-22T01:00:00Z','New Zealand','Egypt','G','Vancouver'),
+  mk(65,'2026-06-27T03:00:00Z','New Zealand','Belgium','G','Vancouver'),
+  mk(66,'2026-06-27T03:00:00Z','Egypt','Iran','G','Seattle'),
+  mk(13,'2026-06-15T16:00:00Z','Spain','Cape Verde','H','Atlanta'),
+  mk(15,'2026-06-15T22:00:00Z','Saudi Arabia','Uruguay','H','Miami'),
+  mk(37,'2026-06-21T16:00:00Z','Spain','Saudi Arabia','H','Atlanta'),
+  mk(39,'2026-06-21T22:00:00Z','Uruguay','Cape Verde','H','Miami'),
+  mk(63,'2026-06-27T00:00:00Z','Uruguay','Spain','H','Guadalajara'),
+  mk(64,'2026-06-27T00:00:00Z','Cape Verde','Saudi Arabia','H','Houston'),
+  mk(17,'2026-06-16T19:00:00Z','France','Senegal','I','New York/NJ'),
+  mk(18,'2026-06-16T22:00:00Z','Norway','Iraq','I','Boston'),
+  mk(42,'2026-06-22T21:00:00Z','France','Iraq','I','Philadelphia'),
+  mk(43,'2026-06-23T00:00:00Z','Norway','Senegal','I','New York/NJ'),
+  mk(61,'2026-06-26T19:00:00Z','Norway','France','I','Boston'),
+  mk(62,'2026-06-26T19:00:00Z','Senegal','Iraq','I','Toronto'),
+  mk(19,'2026-06-17T01:00:00Z','Argentina','Algeria','J','Kansas City'),
+  mk(20,'2026-06-17T04:00:00Z','Austria','Jordan','J','San Francisco'),
+  mk(41,'2026-06-22T17:00:00Z','Argentina','Austria','J','Dallas'),
+  mk(44,'2026-06-23T03:00:00Z','Jordan','Algeria','J','San Francisco'),
+  mk(71,'2026-06-28T02:00:00Z','Jordan','Argentina','J','Dallas'),
+  mk(72,'2026-06-28T02:00:00Z','Algeria','Austria','J','Kansas City'),
+  mk(21,'2026-06-17T17:00:00Z','Portugal','DR Congo','K','Houston'),
+  mk(24,'2026-06-18T02:00:00Z','Uzbekistan','Colombia','K','Mexico City'),
+  mk(45,'2026-06-23T17:00:00Z','Portugal','Uzbekistan','K','Houston'),
+  mk(48,'2026-06-24T02:00:00Z','Colombia','DR Congo','K','Guadalajara'),
+  mk(69,'2026-06-27T23:30:00Z','Colombia','Portugal','K','Miami'),
+  mk(70,'2026-06-27T23:30:00Z','Uzbekistan','DR Congo','K','Atlanta'),
+  mk(22,'2026-06-17T20:00:00Z','England','Croatia','L','Dallas'),
+  mk(23,'2026-06-17T23:00:00Z','Ghana','Panama','L','Toronto'),
+  mk(46,'2026-06-23T20:00:00Z','England','Ghana','L','Boston'),
+  mk(47,'2026-06-23T23:00:00Z','Panama','Croatia','L','Toronto'),
   mk(67,'2026-06-27T21:00:00Z','Panama','England','L','New York/NJ'),
-  mk(68,'2026-06-27T21:00:00Z','Króatía','Gana','L','Philadelphia'),
+  mk(68,'2026-06-27T21:00:00Z','Croatia','Ghana','L','Philadelphia'),
   // ROUND OF 32
-  mk(73,'2026-06-28T19:00:00Z','2. fl. A','2. fl. B',null,'Los Angeles','r32'),
-  mk(74,'2026-06-29T20:30:00Z','1. fl. E','3. fl. (A/B/C/D/F)',null,'Boston','r32'),
-  mk(75,'2026-06-29T21:00:00Z','1. fl. F','2. fl. C',null,'Monterrey','r32'),
-  mk(76,'2026-06-29T17:00:00Z','1. fl. C','2. fl. F',null,'Houston','r32'),
-  mk(77,'2026-06-30T21:00:00Z','1. fl. I','3. fl. (C/D/F/G/H)',null,'New York/NJ','r32'),
-  mk(78,'2026-06-30T17:00:00Z','2. fl. E','2. fl. I',null,'Dallas','r32'),
-  mk(79,'2026-06-30T21:00:00Z','1. fl. A','3. fl. (C/E/F/H/I)',null,'Mexico City','r32'),
-  mk(80,'2026-07-01T16:00:00Z','1. fl. L','3. fl. (E/H/I/J/K)',null,'Atlanta','r32'),
-  mk(81,'2026-07-02T00:00:00Z','1. fl. D','3. fl. (B/E/F/I/J)',null,'San Francisco','r32'),
-  mk(82,'2026-07-01T20:00:00Z','1. fl. G','3. fl. (A/E/H/I/J)',null,'Seattle','r32'),
-  mk(83,'2026-07-02T23:00:00Z','2. fl. K','2. fl. L',null,'Toronto','r32'),
-  mk(84,'2026-07-02T19:00:00Z','1. fl. H','2. fl. J',null,'Los Angeles','r32'),
-  mk(85,'2026-07-04T03:00:00Z','1. fl. B','3. fl. (E/F/G/I/J)',null,'Vancouver','r32'),
-  mk(86,'2026-07-03T22:00:00Z','1. fl. J','2. fl. H',null,'Miami','r32'),
-  mk(87,'2026-07-04T01:30:00Z','1. fl. K','3. fl. (D/E/I/J/L)',null,'Kansas City','r32'),
-  mk(88,'2026-07-03T18:00:00Z','2. fl. D','2. fl. G',null,'Dallas','r32'),
+  mk(73,'2026-06-28T19:00:00Z','2nd A','2nd B',null,'Los Angeles','r32'),
+  mk(74,'2026-06-29T20:30:00Z','1st E','Best 3rd (A/B/C/D/F)',null,'Boston','r32'),
+  mk(75,'2026-06-29T21:00:00Z','1st F','2nd C',null,'Monterrey','r32'),
+  mk(76,'2026-06-29T17:00:00Z','1st C','2nd F',null,'Houston','r32'),
+  mk(77,'2026-06-30T21:00:00Z','1st I','Best 3rd (C/D/F/G/H)',null,'New York/NJ','r32'),
+  mk(78,'2026-06-30T17:00:00Z','2nd E','2nd I',null,'Dallas','r32'),
+  mk(79,'2026-06-30T21:00:00Z','1st A','Best 3rd (C/E/F/H/I)',null,'Mexico City','r32'),
+  mk(80,'2026-07-01T16:00:00Z','1st L','Best 3rd (E/H/I/J/K)',null,'Atlanta','r32'),
+  mk(81,'2026-07-02T00:00:00Z','1st D','Best 3rd (B/E/F/I/J)',null,'San Francisco','r32'),
+  mk(82,'2026-07-01T20:00:00Z','1st G','Best 3rd (A/E/H/I/J)',null,'Seattle','r32'),
+  mk(83,'2026-07-02T23:00:00Z','2nd K','2nd L',null,'Toronto','r32'),
+  mk(84,'2026-07-02T19:00:00Z','1st H','2nd J',null,'Los Angeles','r32'),
+  mk(85,'2026-07-04T03:00:00Z','1st B','Best 3rd (E/F/G/I/J)',null,'Vancouver','r32'),
+  mk(86,'2026-07-03T22:00:00Z','1st J','2nd H',null,'Miami','r32'),
+  mk(87,'2026-07-04T01:30:00Z','1st K','Best 3rd (D/E/I/J/L)',null,'Kansas City','r32'),
+  mk(88,'2026-07-03T18:00:00Z','2nd D','2nd G',null,'Dallas','r32'),
   // ROUND OF 16
-  mk(89,'2026-07-04T21:00:00Z','Sig. L74','Sig. L77',null,'Philadelphia','r16'),
-  mk(90,'2026-07-04T17:00:00Z','Sig. L73','Sig. L75',null,'Houston','r16'),
-  mk(91,'2026-07-05T20:00:00Z','Sig. L76','Sig. L78',null,'New York/NJ','r16'),
-  mk(92,'2026-07-06T00:00:00Z','Sig. L79','Sig. L80',null,'Mexico City','r16'),
-  mk(93,'2026-07-06T19:00:00Z','Sig. L83','Sig. L84',null,'Dallas','r16'),
-  mk(94,'2026-07-07T00:00:00Z','Sig. L81','Sig. L82',null,'Seattle','r16'),
-  mk(95,'2026-07-07T16:00:00Z','Sig. L86','Sig. L88',null,'Atlanta','r16'),
-  mk(96,'2026-07-07T20:00:00Z','Sig. L85','Sig. L87',null,'Vancouver','r16'),
+  mk(89,'2026-07-04T21:00:00Z','W74','W77',null,'Philadelphia','r16'),
+  mk(90,'2026-07-04T17:00:00Z','W73','W75',null,'Houston','r16'),
+  mk(91,'2026-07-05T20:00:00Z','W76','W78',null,'New York/NJ','r16'),
+  mk(92,'2026-07-06T00:00:00Z','W79','W80',null,'Mexico City','r16'),
+  mk(93,'2026-07-06T19:00:00Z','W83','W84',null,'Dallas','r16'),
+  mk(94,'2026-07-07T00:00:00Z','W81','W82',null,'Seattle','r16'),
+  mk(95,'2026-07-07T16:00:00Z','W86','W88',null,'Atlanta','r16'),
+  mk(96,'2026-07-07T20:00:00Z','W85','W87',null,'Vancouver','r16'),
   // QUARTER-FINALS
-  mk(97, '2026-07-09T20:00:00Z','Sig. L89','Sig. L90',null,'Boston','qf'),
-  mk(98, '2026-07-10T19:00:00Z','Sig. L93','Sig. L94',null,'Los Angeles','qf'),
-  mk(99, '2026-07-11T21:00:00Z','Sig. L91','Sig. L92',null,'Miami','qf'),
-  mk(100,'2026-07-12T01:00:00Z','Sig. L95','Sig. L96',null,'Kansas City','qf'),
+  mk(97, '2026-07-09T20:00:00Z','W89','W90',null,'Boston','qf'),
+  mk(98, '2026-07-10T19:00:00Z','W93','W94',null,'Los Angeles','qf'),
+  mk(99, '2026-07-11T21:00:00Z','W91','W92',null,'Miami','qf'),
+  mk(100,'2026-07-12T01:00:00Z','W95','W96',null,'Kansas City','qf'),
   // SEMI-FINALS
-  mk(101,'2026-07-14T19:00:00Z','Sig. L97','Sig. L98',null,'Dallas','sf'),
-  mk(102,'2026-07-15T19:00:00Z','Sig. L99','Sig. L100',null,'Atlanta','sf'),
+  mk(101,'2026-07-14T19:00:00Z','W97','W98',null,'Dallas','sf'),
+  mk(102,'2026-07-15T19:00:00Z','W99','W100',null,'Atlanta','sf'),
   // 3RD PLACE
-  mk(103,'2026-07-18T21:00:00Z','Tap. L101','Tap. L102',null,'Miami','tp'),
+  mk(103,'2026-07-18T21:00:00Z','L101','L102',null,'Miami','tp'),
   // FINAL
-  mk(104,'2026-07-19T19:00:00Z','Sig. L101','Sig. L102',null,'New York/NJ','final'),
+  mk(104,'2026-07-19T19:00:00Z','W101','W102',null,'New York/NJ','final'),
 ];
 
 const GROUPS = ['A','B','C','D','E','F','G','H','I','J','K','L'];
-const KO_LABELS = {r32:'32 LIÐA ÚRSLIT',r16:'16 LIÐA ÚRSLIT',qf:'FJÓRÐUNGSÚRSLIT',sf:'HÁLFLEIKIR',tp:'LEIKUR UM 3. SÆTI',final:'LOKALEIKUR'};
+const KO_LABELS = {r32:'ROUND OF 32',r16:'ROUND OF 16',qf:'QUARTER-FINAL',sf:'SEMI-FINAL',tp:'THIRD PLACE',final:'FINAL'};
 
 // ── Countries & TV channels per match ─────────────────────────────────────────
 const COUNTRIES = [
-  { code:'is', flag:'🇮🇸', name:'Ísland',      station:'RÚV',       tz:'Atlantic/Reykjavik' },
-  { code:'uk', flag:'🇬🇧', name:'Bretland',     station:'BBC / ITV', tz:'Europe/London' },
-  { code:'se', flag:'🇸🇪', name:'Svíþjóð',      station:'SVT / TV4', tz:'Europe/Stockholm' },
-  { code:'no', flag:'🇳🇴', name:'Noregur',       station:'NRK / TV 2',tz:'Europe/Oslo' },
-  { code:'us', flag:'🇺🇸', name:'Bandaríkin',   station:'FOX / FS1', tz:'America/New_York' },
+  { code:'is', flag:'🇮🇸', name:'Iceland',        station:'RÚV',       tz:'Atlantic/Reykjavik' },
+  { code:'uk', flag:'🇬🇧', name:'United Kingdom', station:'BBC / ITV', tz:'Europe/London' },
+  { code:'se', flag:'🇸🇪', name:'Sweden',          station:'SVT / TV4', tz:'Europe/Stockholm' },
+  { code:'no', flag:'🇳🇴', name:'Norway',          station:'NRK / TV 2',tz:'Europe/Oslo' },
+  { code:'us', flag:'🇺🇸', name:'United States',  station:'FOX / FS1', tz:'America/New_York' },
 ];
 
 // Per-match channel lookup. Keys = match.id.
@@ -207,8 +207,8 @@ function getChannel(matchId, country, channelMap) {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const TZ_IS = 'Atlantic/Reykjavik'; // always used for API fetch / Iceland
 // These accept a tz parameter so they can adapt to any country's timezone
-const fmt24 = (iso, tz) => new Date(iso).toLocaleTimeString('is-IS',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:tz||TZ_IS});
-const fmtDay = (iso, tz) => new Date(iso).toLocaleDateString('is-IS',{weekday:'long',day:'numeric',month:'long',timeZone:tz||TZ_IS});
+const fmt24 = (iso, tz) => new Date(iso).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:tz||TZ_IS});
+const fmtDay = (iso, tz) => new Date(iso).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',timeZone:tz||TZ_IS});
 const isoDay = (iso, tz) => new Date(iso).toLocaleDateString('sv-SE',{timeZone:tz||TZ_IS});
 const todayStr = (tz) => new Date().toLocaleDateString('sv-SE',{timeZone:tz||TZ_IS});
 
@@ -303,7 +303,7 @@ function WCApp({ mobile, dark, onThemeChange }) {
   const searchRes = searchQ ? MATCHES.filter(m =>
     m.home.toLowerCase().includes(searchQ) || m.away.toLowerCase().includes(searchQ) ||
     m.venue.toLowerCase().includes(searchQ) ||
-    (m.group && ('riðill '+m.group.toLowerCase()).includes(searchQ))
+    (m.group && ('group '+m.group.toLowerCase()).includes(searchQ))
   ).sort((a,b) => a.iso.localeCompare(b.iso)) : null;
 
   // ── Styles ────────────────────────────────────────────────────────────────────
@@ -502,7 +502,7 @@ function WCApp({ mobile, dark, onThemeChange }) {
               ...S.evTime,
               color: status === 'live' ? '#FF3B47' : status === 'done' ? pal.muted : pal.fg
             }}>{start}</span>
-            <span style={S.evTimeEnd}>til {end}</span>
+            <span style={S.evTimeEnd}>to {end}</span>
           </div>
 
           {/* ICON */}
@@ -514,10 +514,10 @@ function WCApp({ mobile, dark, onThemeChange }) {
           <div style={S.evContent}>
             {/* Meta row */}
             <div style={S.evMeta}>
-              <span style={S.evMetaText}>Fótbolti</span>
+              <span style={S.evMetaText}>Football</span>
               {isGroup && <>
                 <span style={S.evMetaDot}>·</span>
-                <span style={S.ridillBadge}>RIÐILL {match.group}</span>
+                <span style={S.ridillBadge}>GROUP {match.group}</span>
               </>}
               {!isGroup && match.round && (
                 <span style={{ ...S.ridillBadge, color:pal.muted, background:'rgba(128,128,128,0.12)' }}>
@@ -556,7 +556,7 @@ function WCApp({ mobile, dark, onThemeChange }) {
   function ByDate({ matches }) {
     if (!matches.length) return (
       <div style={S.emptyMsg}>
-        <div style={{fontWeight:700}}>Engir leikir fundust.</div>
+        <div style={{fontWeight:700}}>No matches found.</div>
       </div>
     );
     const byDate = {};
@@ -589,8 +589,8 @@ function WCApp({ mobile, dark, onThemeChange }) {
 
   function KoView() {
     const rounds = ['r32','r16','qf','sf','tp','final'];
-    const labels = {r32:'32 liða úrslit',r16:'16 liða úrslit',qf:'Fjórðungsúrslit',
-      sf:'Hálfleikir',tp:'Leikur um 3. sæti',final:'Lokaleikur'};
+    const labels = {r32:'Round of 32',r16:'Round of 16',qf:'Quarter-Finals',
+      sf:'Semi-Finals',tp:'Third Place',final:'Final'};
     return rounds.map(r => {
       const arr = MATCHES.filter(m => m.round === r).sort((a,b) => a.iso.localeCompare(b.iso));
       if (!arr.length) return null;
@@ -608,8 +608,8 @@ function WCApp({ mobile, dark, onThemeChange }) {
       const next = MATCHES.filter(m => new Date(m.iso) > new Date()).sort((a,b) => a.iso.localeCompare(b.iso))[0];
       return (
         <div style={S.emptyMsg}>
-          <div style={{fontWeight:700}}>Enginn HM-leikur í dag</div>
-          {next && <div style={{marginTop:8,fontSize:12}}>Næsti: {fmtDay(next.iso,tz)} {fmt24(next.iso,tz)}</div>}
+          <div style={{fontWeight:700}}>No World Cup match today</div>
+          {next && <div style={{marginTop:8,fontSize:12}}>Next: {fmtDay(next.iso,tz)} {fmt24(next.iso,tz)}</div>}
         </div>
       );
     }
@@ -617,7 +617,7 @@ function WCApp({ mobile, dark, onThemeChange }) {
   }
 
   function SearchView() {
-    if (!searchRes.length) return <div style={S.emptyMsg}>Engar niðurstöður.</div>;
+    if (!searchRes.length) return <div style={S.emptyMsg}>No results found.</div>;
     return <ByDate matches={searchRes}/>;
   }
 
@@ -629,7 +629,7 @@ function WCApp({ mobile, dark, onThemeChange }) {
           <span style={{fontSize:13,fontWeight:700,fontFamily:'"JetBrains Mono",monospace',color:'#FF3B47'}}>
             {fmt24(match.iso,tz)}
           </span>
-          {match.group && <span style={{fontSize:10,color:pal.muted,fontWeight:700}}>RIÐILL {match.group}</span>}
+          {match.group && <span style={{fontSize:10,color:pal.muted,fontWeight:700}}>GROUP {match.group}</span>}
           <div style={{...S.liveBadge,marginLeft:'auto',padding:'1px 6px'}}>
             <span style={S.liveDotEl}/>LIVE
           </div>
@@ -657,12 +657,12 @@ function WCApp({ mobile, dark, onThemeChange }) {
         <div style={{display:'flex',alignItems:'center',gap:12,flexShrink:0}}>
           <img src={`assets/logos/sportzone-${isDark?'dark':'light'}.svg`} alt="SportZone"
             style={{height:26,width:'auto',display:'block'}}/>
-          {!mobile && <a href="/" style={S.backBtn}>← Aðalsíða</a>}
+          {!mobile && <a href="/" style={S.backBtn}>← Main site</a>}
         </div>
         {!mobile && (
           <div>
-            <div style={{fontWeight:800,fontSize:18,letterSpacing:'-0.02em',lineHeight:1}}>HM í fótbolta 2026</div>
-            <div style={{fontSize:10,color:pal.muted,letterSpacing:'0.10em',marginTop:4}}>11. JÚN – 19. JÚL · USA / KANADA / MEXÍKÓ · RÚV</div>
+            <div style={{fontWeight:800,fontSize:18,letterSpacing:'-0.02em',lineHeight:1}}>FIFA World Cup 2026</div>
+            <div style={{fontSize:10,color:pal.muted,letterSpacing:'0.10em',marginTop:4}}>11 JUN – 19 JUL · USA / CANADA / MEXICO</div>
           </div>
         )}
         {/* Country selector */}
@@ -670,7 +670,7 @@ function WCApp({ mobile, dark, onThemeChange }) {
           style={S.countrySel}
           value={country}
           onChange={e => handleCountry(e.target.value)}
-          title="Veldu land"
+          title="Select country"
         >
           {COUNTRIES.map(c => (
             <option key={c.code} value={c.code}>{c.flag} {c.name}</option>
@@ -681,7 +681,7 @@ function WCApp({ mobile, dark, onThemeChange }) {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={pal.muted} strokeWidth="2" strokeLinecap="round">
             <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>
           </svg>
-          <input style={S.searchInput} placeholder="Leita að landi, völlum…"
+          <input style={S.searchInput} placeholder="Search teams, venues…"
             value={search} onChange={e => setSearch(e.target.value)}/>
           {search && <button onClick={() => setSearch('')}
             style={{background:'none',border:'none',cursor:'pointer',color:pal.muted,fontSize:16,lineHeight:1,padding:'0 2px',display:'flex',alignItems:'center'}}>×</button>}
@@ -701,7 +701,7 @@ function WCApp({ mobile, dark, onThemeChange }) {
           <span style={{width:8,height:8,borderRadius:'50%',background:'#FF3B47',
             display:'inline-block',flexShrink:0,animation:'ifPulse 1.4s ease-in-out infinite'}}/>
           <span style={{fontSize:12,fontWeight:700,color:'#FF3B47'}}>
-            Í BEINNI: {liveMs.map(m => `${m.home} – ${m.away}`).join('  ·  ')}
+            LIVE: {liveMs.map(m => `${m.home} – ${m.away}`).join('  ·  ')}
           </span>
         </div>
       )}
@@ -709,9 +709,9 @@ function WCApp({ mobile, dark, onThemeChange }) {
       {/* ROUND TABS */}
       <div style={S.roundStrip} data-sh>
         {[
-          {id:'today', wk:'Í dag',        name:String(todayCount||'0'), sub:'LEIKIR Í DAG'},
-          {id:'group', wk:'Riðlakeppni',  name:'72',                    sub:'LEIKIR'},
-          {id:'ko',    wk:'Úrslitaleikir',name:'32',                    sub:'LEIKIR'},
+          {id:'today', wk:'Today',        name:String(todayCount||'0'), sub:'MATCHES TODAY'},
+          {id:'group', wk:'Group Stage',  name:'72',                    sub:'MATCHES'},
+          {id:'ko',    wk:'Knockouts',    name:'32',                    sub:'MATCHES'},
         ].map(rt => {
           const a = tab===rt.id && !searchRes;
           return (
@@ -726,7 +726,7 @@ function WCApp({ mobile, dark, onThemeChange }) {
           <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'flex-end',
             padding:'0 32px',color:pal.muted,fontSize:11}}>
             <span style={{fontWeight:700,letterSpacing:'0.08em'}}>
-              48 ÞJÓÐIR · 104 LEIKIR · {COUNTRIES.find(c=>c.code===country)?.station||'RÚV'}
+              48 NATIONS · 104 MATCHES · {COUNTRIES.find(c=>c.code===country)?.station||'RÚV'}
             </span>
           </div>
         )}
@@ -735,8 +735,8 @@ function WCApp({ mobile, dark, onThemeChange }) {
       {/* GROUP BAR */}
       {tab==='group' && !searchRes && (
         <div style={S.groupBar} data-sh>
-          <button style={S.allarChip(group==='ALL')} onClick={() => setGroup('ALL')}>ALLIR RIÐLAR</button>
-          <span style={S.groupLabel}>RIÐLAR:</span>
+          <button style={S.allarChip(group==='ALL')} onClick={() => setGroup('ALL')}>ALL GROUPS</button>
+          <span style={S.groupLabel}>GROUPS:</span>
           {GROUPS.map(g => (
             <button key={g} style={S.groupChip(group===g && group!=='ALL')} onClick={() => setGroup(g)}>{g}</button>
           ))}
@@ -750,21 +750,21 @@ function WCApp({ mobile, dark, onThemeChange }) {
           <div style={S.livePane}>
             <div style={S.liveHd}>
               <span style={S.liveDotBig}/>
-              <span style={S.liveLabel}>Í beinni núna</span>
+              <span style={S.liveLabel}>Live now</span>
               {liveMs.length > 0 && <span style={S.liveCount}>{liveMs.length}</span>}
             </div>
             {liveMs.length === 0
-              ? <div style={{color:pal.muted,fontSize:12,lineHeight:1.6}}>Enginn leikur í gangi núna.</div>
+              ? <div style={{color:pal.muted,fontSize:12,lineHeight:1.6}}>No match in progress.</div>
               : liveMs.map(m => <LiveMini key={m.id} match={m}/>)}
             {(() => {
               const up = todayMs.filter(m => matchStatus(m.iso,m.round)==='upcoming');
               if (!up.length) return null;
               return <>
-                <div style={{...S.liveLabel,display:'block',marginTop:20,marginBottom:10}}>Í dag</div>
+                <div style={{...S.liveLabel,display:'block',marginTop:20,marginBottom:10}}>Today</div>
                 {up.slice(0,6).map(m => (
                   <div key={m.id} style={{...S.liveMiniCard,marginBottom:6}}>
                     <div style={{fontWeight:700,fontSize:14,fontFamily:'"JetBrains Mono",monospace',marginBottom:4}}>{fmt24(m.iso,tz)}</div>
-                    {m.group && <div style={{fontSize:10,color:pal.muted,fontWeight:700,marginBottom:6}}>RIÐILL {m.group}</div>}
+                    {m.group && <div style={{fontSize:10,color:pal.muted,fontWeight:700,marginBottom:6}}>GROUP {m.group}</div>}
                     <div style={{fontWeight:700,fontSize:12,marginBottom:2}}>{m.home}</div>
                     <div style={{fontWeight:700,fontSize:12,marginBottom:4}}>{m.away}</div>
                     <div style={{fontSize:10,color:pal.muted}}>📍 {m.venue}</div>
@@ -784,11 +784,11 @@ function WCApp({ mobile, dark, onThemeChange }) {
           <div style={{textAlign:'center',marginTop:32,color:pal.muted,fontSize:11,padding:mobile?'0 16px 16px':'0 32px 16px'}}>
             {(() => {
               const c = COUNTRIES.find(x=>x.code===country);
-              if (country==='is') return 'RÚV hefur sýningarrétt á öllum 104 leikjum HM 2026';
-              if (country==='uk') return 'BBC og ITV deila réttindum á öllum 104 leikjum í Bretlandi';
-              if (country==='se') return 'SVT og TV4 deila réttindum á öllum 104 leikjum í Svíþjóð';
-              if (country==='no') return 'NRK og TV 2 deila réttindum á öllum 104 leikjum í Noregi';
-              if (country==='us') return 'FOX/FS1 (enska) og Telemundo (spænska) sýna alla 104 leiki í Bandaríkjunum';
+              if (country==='is') return 'RÚV holds broadcast rights to all 104 matches of the 2026 World Cup';
+              if (country==='uk') return 'BBC and ITV share rights to all 104 matches in the United Kingdom';
+              if (country==='se') return 'SVT and TV4 share rights to all 104 matches in Sweden';
+              if (country==='no') return 'NRK and TV 2 share rights to all 104 matches in Norway';
+              if (country==='us') return 'FOX/FS1 (English) and Telemundo (Spanish) broadcast all 104 matches in the United States';
               return '';
             })()}
           </div>
