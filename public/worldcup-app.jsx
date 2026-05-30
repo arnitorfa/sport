@@ -125,11 +125,11 @@ const KO_LABELS = {r32:'32 LIÐA ÚRSLIT',r16:'16 LIÐA ÚRSLIT',qf:'FJÓRÐUNGS
 
 // ── Countries & TV channels per match ─────────────────────────────────────────
 const COUNTRIES = [
-  { code:'is', flag:'🇮🇸', name:'Ísland',      station:'RÚV' },
-  { code:'uk', flag:'🇬🇧', name:'Bretland',     station:'BBC / ITV' },
-  { code:'se', flag:'🇸🇪', name:'Svíþjóð',      station:'SVT / TV4' },
-  { code:'no', flag:'🇳🇴', name:'Noregur',      station:'NRK / TV 2' },
-  { code:'us', flag:'🇺🇸', name:'Bandaríkin',   station:'FOX / FS1' },
+  { code:'is', flag:'🇮🇸', name:'Ísland',      station:'RÚV',       tz:'Atlantic/Reykjavik' },
+  { code:'uk', flag:'🇬🇧', name:'Bretland',     station:'BBC / ITV', tz:'Europe/London' },
+  { code:'se', flag:'🇸🇪', name:'Svíþjóð',      station:'SVT / TV4', tz:'Europe/Stockholm' },
+  { code:'no', flag:'🇳🇴', name:'Noregur',       station:'NRK / TV 2',tz:'Europe/Oslo' },
+  { code:'us', flag:'🇺🇸', name:'Bandaríkin',   station:'FOX / FS1', tz:'America/New_York' },
 ];
 
 // Per-match channel lookup. Keys = match.id.
@@ -205,12 +205,12 @@ function getChannel(matchId, country, channelMap) {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-const TZ = 'Atlantic/Reykjavik';
-// 24h time, no AM/PM, no "kl."
-const fmt24 = iso => new Date(iso).toLocaleTimeString('is-IS',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:TZ});
-const fmtDay = iso => new Date(iso).toLocaleDateString('is-IS',{weekday:'long',day:'numeric',month:'long',timeZone:TZ});
-const isoDay = iso => new Date(iso).toLocaleDateString('sv-SE',{timeZone:TZ});
-const todayStr = () => new Date().toLocaleDateString('sv-SE',{timeZone:TZ});
+const TZ_IS = 'Atlantic/Reykjavik'; // always used for API fetch / Iceland
+// These accept a tz parameter so they can adapt to any country's timezone
+const fmt24 = (iso, tz) => new Date(iso).toLocaleTimeString('is-IS',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:tz||TZ_IS});
+const fmtDay = (iso, tz) => new Date(iso).toLocaleDateString('is-IS',{weekday:'long',day:'numeric',month:'long',timeZone:tz||TZ_IS});
+const isoDay = (iso, tz) => new Date(iso).toLocaleDateString('sv-SE',{timeZone:tz||TZ_IS});
+const todayStr = (tz) => new Date().toLocaleDateString('sv-SE',{timeZone:tz||TZ_IS});
 
 // End time: group stage 105 min, knockout rounds 120 min (could go to ET)
 function endTime(iso, round) {
@@ -242,6 +242,7 @@ function WCApp({ mobile, dark, onThemeChange }) {
     setCountry(c);
     try { localStorage.setItem('wc_country', c); } catch(e) {}
   };
+  const tz = COUNTRIES.find(c => c.code === country)?.tz || TZ_IS;
 
   React.useEffect(() => {
     const t = setInterval(() => tick(n => n+1), 30000);
@@ -251,7 +252,7 @@ function WCApp({ mobile, dark, onThemeChange }) {
   // Dynamic channel detection from /api/events for near-term dates
   React.useEffect(() => {
     const now = new Date();
-    const dates = [...new Set(MATCHES.map(m => isoDay(m.iso)))];
+    const dates = [...new Set(MATCHES.map(m => isoDay(m.iso, TZ_IS)))];
     dates.forEach(async d => {
       const dayDiff = (new Date(d) - now) / 86400000;
       if (dayDiff > 4 || dayDiff < -2) return;
@@ -261,7 +262,7 @@ function WCApp({ mobile, dark, onThemeChange }) {
         const ruvEvs = (data.events || []).filter(e => e.station === 'ruv');
         const updates = {};
         MATCHES.forEach(match => {
-          if (isoDay(match.iso) !== d) return;
+          if (isoDay(match.iso, TZ_IS) !== d) return;
           const w1 = match.home.split(' ')[0].toLowerCase();
           const w2 = match.away.split(' ')[0].toLowerCase();
           const ev = ruvEvs.find(e => {
@@ -295,8 +296,8 @@ function WCApp({ mobile, dark, onThemeChange }) {
   React.useEffect(() => { document.body.style.background = isDark ? '#222222' : '#F4F3F0'; }, [isDark]);
 
   // ── Derived ───────────────────────────────────────────────────────────────────
-  const today    = todayStr();
-  const todayMs  = MATCHES.filter(m => isoDay(m.iso) === today).sort((a,b) => a.iso.localeCompare(b.iso));
+  const today    = todayStr(tz);
+  const todayMs  = MATCHES.filter(m => isoDay(m.iso,tz) === today).sort((a,b) => a.iso.localeCompare(b.iso));
   const liveMs   = MATCHES.filter(m => matchStatus(m.iso, m.round) === 'live');
   const searchQ  = search.trim().toLowerCase();
   const searchRes = searchQ ? MATCHES.filter(m =>
@@ -466,18 +467,18 @@ function WCApp({ mobile, dark, onThemeChange }) {
         <div style={S.evStation}>
           <img src={`assets/logos/${logoFile}`} alt={ch}
             style={{ height:16, width:'auto', maxWidth:48, display:'block' }}/>
-          <span style={{ fontSize:9.5, fontWeight:800, color:pal.muted,
-            letterSpacing:'0.06em', fontFamily:'"JetBrains Mono",monospace' }}>
+          <span style={{ fontSize:mobile?11:12, fontWeight:800, color:pal.muted,
+            letterSpacing:'0.04em', fontFamily:'"JetBrains Mono",monospace' }}>
             {ch}
           </span>
         </div>
       );
     }
-    // Other countries: text badge
+    // Other countries: larger text badge
     return (
       <div style={S.evStation}>
-        <span style={{ fontSize:10, fontWeight:800, color:pal.badgeColor,
-          letterSpacing:'0.06em', fontFamily:'"JetBrains Mono",monospace',
+        <span style={{ fontSize:mobile?12:13, fontWeight:800, color:pal.badgeColor,
+          letterSpacing:'0.03em', fontFamily:'"JetBrains Mono",monospace',
           textAlign:'center', lineHeight:1.3, whiteSpace:'nowrap' }}>
           {ch}
         </span>
@@ -488,8 +489,8 @@ function WCApp({ mobile, dark, onThemeChange }) {
   // ── Match card — screenshot layout ───────────────────────────────────────────
   function MatchCard({ match }) {
     const status  = matchStatus(match.iso, match.round);
-    const start   = fmt24(match.iso);
-    const end     = fmt24(endTime(match.iso, match.round).toISOString());
+    const start   = fmt24(match.iso, tz);
+    const end     = fmt24(endTime(match.iso, match.round).toISOString(), tz);
     const isGroup = match.round === 'group';
 
     return (
@@ -559,10 +560,10 @@ function WCApp({ mobile, dark, onThemeChange }) {
       </div>
     );
     const byDate = {};
-    matches.forEach(m => { const d=isoDay(m.iso); if(!byDate[d])byDate[d]=[]; byDate[d].push(m); });
+    matches.forEach(m => { const d=isoDay(m.iso,tz); if(!byDate[d])byDate[d]=[]; byDate[d].push(m); });
     return Object.entries(byDate).sort().map(([d,arr]) => (
       <div key={d}>
-        <div style={S.dateHdr}>{fmtDay(arr[0].iso)}</div>
+        <div style={S.dateHdr}>{fmtDay(arr[0].iso,tz)}</div>
         {arr.map(m => <MatchCard key={m.id} match={m}/>)}
       </div>
     ));
@@ -608,7 +609,7 @@ function WCApp({ mobile, dark, onThemeChange }) {
       return (
         <div style={S.emptyMsg}>
           <div style={{fontWeight:700}}>Enginn HM-leikur í dag</div>
-          {next && <div style={{marginTop:8,fontSize:12}}>Næsti: {fmtDay(next.iso)} {fmt24(next.iso)}</div>}
+          {next && <div style={{marginTop:8,fontSize:12}}>Næsti: {fmtDay(next.iso,tz)} {fmt24(next.iso,tz)}</div>}
         </div>
       );
     }
@@ -626,7 +627,7 @@ function WCApp({ mobile, dark, onThemeChange }) {
       <div style={S.liveMiniCard}>
         <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:8}}>
           <span style={{fontSize:13,fontWeight:700,fontFamily:'"JetBrains Mono",monospace',color:'#FF3B47'}}>
-            {fmt24(match.iso)}
+            {fmt24(match.iso,tz)}
           </span>
           {match.group && <span style={{fontSize:10,color:pal.muted,fontWeight:700}}>RIÐILL {match.group}</span>}
           <div style={{...S.liveBadge,marginLeft:'auto',padding:'1px 6px'}}>
@@ -762,7 +763,7 @@ function WCApp({ mobile, dark, onThemeChange }) {
                 <div style={{...S.liveLabel,display:'block',marginTop:20,marginBottom:10}}>Í dag</div>
                 {up.slice(0,6).map(m => (
                   <div key={m.id} style={{...S.liveMiniCard,marginBottom:6}}>
-                    <div style={{fontWeight:700,fontSize:14,fontFamily:'"JetBrains Mono",monospace',marginBottom:4}}>{fmt24(m.iso)}</div>
+                    <div style={{fontWeight:700,fontSize:14,fontFamily:'"JetBrains Mono",monospace',marginBottom:4}}>{fmt24(m.iso,tz)}</div>
                     {m.group && <div style={{fontSize:10,color:pal.muted,fontWeight:700,marginBottom:6}}>RIÐILL {m.group}</div>}
                     <div style={{fontWeight:700,fontSize:12,marginBottom:2}}>{m.home}</div>
                     <div style={{fontWeight:700,fontSize:12,marginBottom:4}}>{m.away}</div>
