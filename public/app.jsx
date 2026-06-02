@@ -979,6 +979,48 @@ function App() {
         )}
       </div>
 
+      {/* ── HM BANNER ── */}
+      {(() => {
+        const WC_START = new Date('2026-06-11T19:00:00Z');
+        const WC_END   = new Date('2026-07-19T23:00:00Z');
+        const now = new Date();
+        if (now > WC_END) return null;
+        const started  = now >= WC_START;
+        const daysLeft = Math.ceil((WC_START - now) / 86400000);
+        return (
+          <a href="/worldcup" style={{
+            display:'flex', alignItems:'center', gap:12,
+            padding: isMobile ? '10px 16px' : '10px 28px',
+            borderBottom:`1px solid ${pal.hair}`,
+            background: pal.accentSoft,
+            textDecoration:'none', color:pal.fg, cursor:'pointer'
+          }}>
+            <span style={{fontSize:22, lineHeight:1, flexShrink:0}}>⚽</span>
+            <div style={{flex:1, minWidth:0}}>
+              <div style={{fontSize:11, fontWeight:800, letterSpacing:'0.14em',
+                color:pal.accent, textTransform:'uppercase'}}>
+                HM KARLA Í FÓTBOLTA 2026
+              </div>
+              {!started ? (
+                <div style={{fontSize:10, color:pal.muted, marginTop:2, fontWeight:600,
+                  letterSpacing:'0.06em'}}>
+                  HM HEFST EFTIR {daysLeft} {daysLeft === 1 ? 'DAG' : 'DAGA'}
+                </div>
+              ) : (
+                <div style={{fontSize:10, color:'#FF3B47', marginTop:2, fontWeight:700,
+                  letterSpacing:'0.10em'}}>
+                  ● Í GANGI
+                </div>
+              )}
+            </div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+              stroke={pal.muted} strokeWidth="2" strokeLinecap="round">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </a>
+        );
+      })()}
+
       {/* ── BODY ── */}
       <div style={ifS.body}>
         {/* Live rail */}
@@ -1060,6 +1102,58 @@ function App() {
 
           })}
         </div>
+
+        {/* WC sidebar card */}
+        {!isMobile && (() => {
+          const WC_START = new Date('2026-06-11T19:00:00Z');
+          const WC_END   = new Date('2026-07-19T23:00:00Z');
+          const now = new Date();
+          if (now > WC_END) return null;
+          const started  = now >= WC_START;
+          const daysLeft = Math.ceil((WC_START - now) / 86400000);
+          return (
+            <a href="/worldcup" style={{
+              display:'block', marginTop:'auto', paddingTop:20,
+              textDecoration:'none'
+            }}>
+              <div style={{
+                background: pal.accentSoft,
+                border:`1px solid ${isDark ? 'rgba(200,255,61,0.2)' : 'rgba(242,100,25,0.2)'}`,
+                borderRadius:12, padding:'14px 16px',
+              }}>
+                <div style={{fontSize:20, marginBottom:8}}>⚽</div>
+                <div style={{fontSize:10, fontWeight:800, letterSpacing:'0.14em',
+                  color:pal.accent, textTransform:'uppercase', marginBottom:4}}>
+                  HM KARLA Í FÓTBOLTA 2026
+                </div>
+                {!started ? (
+                  <>
+                    <div style={{fontSize:9, color:pal.muted, fontWeight:600,
+                      letterSpacing:'0.08em', textTransform:'uppercase', marginBottom:4}}>
+                      HM HEFST EFTIR
+                    </div>
+                    <div style={{fontSize:28, fontWeight:800,
+                      fontFamily:'"JetBrains Mono",monospace',
+                      letterSpacing:'-0.04em', lineHeight:1, color:pal.fg}}>
+                      {daysLeft}
+                      <span style={{fontSize:12, fontWeight:600, color:pal.muted,
+                        marginLeft:5, letterSpacing:'0.04em'}}>
+                        {daysLeft === 1 ? 'DAGUR' : 'DAGAR'}
+                      </span>
+                    </div>
+                    <div style={{fontSize:9, color:pal.muted, marginTop:8,
+                      fontWeight:600, letterSpacing:'0.06em'}}>
+                      11 JÚN – 19 JÚL · USA/CAN/MEX
+                    </div>
+                  </>
+                ) : (
+                  <div style={{fontSize:11, color:'#FF3B47', fontWeight:700,
+                    letterSpacing:'0.10em'}}>● Í GANGI</div>
+                )}
+              </div>
+            </a>
+          );
+        })()}
 
         {/* Timeline — flat chronological list, one row per event */}
         <div style={ifS.timeline}>

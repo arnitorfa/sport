@@ -403,6 +403,44 @@ function MobileApp({ dark, onThemeChange }) {
         </div>
       </div>
 
+      {/* ── HM BANNER ── */}
+      {(() => {
+        const WC_START = new Date('2026-06-11T19:00:00Z');
+        const WC_END   = new Date('2026-07-19T23:00:00Z');
+        const now = new Date();
+        if (now > WC_END) return null;
+        const started  = now >= WC_START;
+        const daysLeft = Math.ceil((WC_START - now) / 86400000);
+        return (
+          <a href="/worldcup" style={{
+            display:'flex', alignItems:'center', gap:12,
+            padding:'10px 14px',
+            borderBottom:`1px solid ${pal.hair}`,
+            background: isDark ? 'rgba(200,255,61,0.08)' : 'rgba(242,100,25,0.08)',
+            textDecoration:'none', color:pal.fg
+          }}>
+            <span style={{fontSize:22, lineHeight:1, flexShrink:0}}>⚽</span>
+            <div style={{flex:1, minWidth:0}}>
+              <div style={{fontSize:10.5, fontWeight:800, letterSpacing:'0.12em',
+                color: isDark ? '#C8FF3D' : '#F26419', textTransform:'uppercase'}}>
+                HM KARLA Í FÓTBOLTA 2026
+              </div>
+              {!started ? (
+                <div style={{fontSize:10, color:pal.muted, marginTop:1, fontWeight:600}}>
+                  HM HEFST EFTIR {daysLeft} {daysLeft === 1 ? 'DAG' : 'DAGA'}
+                </div>
+              ) : (
+                <div style={{fontSize:10, color:'#FF3B47', marginTop:1, fontWeight:700}}>● Í GANGI</div>
+              )}
+            </div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+              stroke={pal.muted} strokeWidth="2" strokeLinecap="round">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </a>
+        );
+      })()}
+
       {/* ── EVENT LIST ───────────────────────────────────────────────────────── */}
       <div style={{ padding: '8px 14px 32px' }}>
         {loadingEvents && (
