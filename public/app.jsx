@@ -972,9 +972,19 @@ function App() {
 
         })}
         {!isMobile && (
-          <div style={{ marginLeft: 'auto', color: pal.muted, fontSize: 11,
-            fontFamily: '"JetBrains Mono", monospace' }}>
-            {filtered.length} viðburðir sýndir
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 20 }}>
+            <a href="/worldcup" style={{
+              fontSize: 11, fontWeight: 700, letterSpacing: '0.04em',
+              color: pal.accent, textDecoration: 'none',
+              fontFamily: '"Inter", sans-serif',
+              whiteSpace: 'nowrap',
+            }}>
+              HM karla 2026 · Dagskráin hér!
+            </a>
+            <div style={{ color: pal.muted, fontSize: 11,
+              fontFamily: '"JetBrains Mono", monospace', whiteSpace: 'nowrap' }}>
+              {filtered.length} viðburðir sýndir
+            </div>
           </div>
         )}
       </div>
