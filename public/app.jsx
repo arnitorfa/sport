@@ -974,7 +974,11 @@ function App() {
         {!isMobile && (
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 20 }}>
             <a href="/worldcup" style={{
-              fontSize: 11, fontWeight: 700, letterSpacing: '0.04em',
+              display: 'inline-flex', alignItems: 'center', gap: 7,
+              padding: '6px 14px', borderRadius: 8,
+              border: `1.5px solid ${pal.accent}`,
+              background: pal.accentSoft,
+              fontSize: 12.5, fontWeight: 700, letterSpacing: '0.02em',
               color: pal.accent, textDecoration: 'none',
               fontFamily: '"Inter", sans-serif',
               whiteSpace: 'nowrap',
