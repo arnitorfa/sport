@@ -973,7 +973,7 @@ function App() {
         })}
         {!isMobile && (
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 20 }}>
-            <a href="/worldcup" style={{
+            <a href="https://worldcup.sportzone.is" style={{
               display: 'inline-flex', alignItems: 'center', gap: 7,
               padding: '6px 14px', borderRadius: 8,
               border: `1.5px solid ${pal.accent}`,
