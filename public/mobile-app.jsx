@@ -146,10 +146,31 @@ function MobileApp({ dark, onThemeChange }) {
   // ── filtering + sorting ─────────────────────────────────────────────────────
   const favActive = selectedSports.has('fav');
   const sportIds = [...selectedSports].filter((s) => s !== 'fav');
+  const isWCEvent = (e) => {
+    if (e.sport !== 'fb') return false;
+    const hay = ((e.comp||'') + ' ' + (e.title||'') + ' ' + (e.sub||'')).toLowerCase();
+    if (hay.includes('world cup') || hay.includes('heimsbikar') || hay.includes('fifa')) return true;
+    if (/\bhm\b/.test(hay)) return true;
+    // RÚV shows WC matches with just "Team A - Team B" as title, empty comp/sub.
+    // During the WC window all RÚV football is WC programming.
+    if (e.station === 'ruv') {
+      const iso = e.startIso || '';
+      if (iso >= '2026-06-11' && iso < '2026-07-20') return true;
+    }
+    return false;
+  };
+  const hmActive = sportIds.includes('hm2026');
+  const sportIdsNoHM = sportIds.filter(s => s !== 'hm2026');
+  const matchesSportFilter = (e) => {
+    if (sportIds.length === 0) return true;
+    if (hmActive && isWCEvent(e)) return true;
+    if (sportIdsNoHM.length > 0 && sportIdsNoHM.includes(e.sport)) return true;
+    return false;
+  };
   const filtered = events
     .filter((e) => stations.includes(e.station))
     .filter((e) => !favActive || isStarred(e))
-    .filter((e) => sportIds.length === 0 || sportIds.includes(e.sport))
+    .filter(matchesSportFilter)
     .filter((e) => {
       if (!search) return true;
       const q = search.toLowerCase();

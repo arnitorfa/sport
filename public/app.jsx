@@ -285,6 +285,31 @@ function App() {
   const favActive = selectedSports.has('fav');
   const sportIds = [...selectedSports].filter((s) => s !== 'fav');
 
+  // HM 2026 filter — matches football events with WC-related comp/title/sub,
+  // or any RÚV football event during the WC window (RÚV uses only team names
+  // as title with no comp field, so keyword matching alone misses actual matches).
+  const isWCEvent = (e) => {
+    if (e.sport !== 'fb') return false;
+    const hay = ((e.comp||'') + ' ' + (e.title||'') + ' ' + (e.sub||'')).toLowerCase();
+    if (hay.includes('world cup') || hay.includes('heimsbikar') || hay.includes('fifa')) return true;
+    if (/\bhm\b/.test(hay)) return true;
+    // RÚV shows WC matches with just "Team A - Team B" as title, empty comp/sub.
+    // During the WC window all RÚV football is WC programming.
+    if (e.station === 'ruv') {
+      const iso = e.startIso || '';
+      if (iso >= '2026-06-11' && iso < '2026-07-20') return true;
+    }
+    return false;
+  };
+  const hmActive = sportIds.includes('hm2026');
+  const sportIdsNoHM = sportIds.filter(s => s !== 'hm2026');
+  const matchesSportFilter = (e) => {
+    if (sportIds.length === 0) return true;
+    if (hmActive && isWCEvent(e)) return true;
+    if (sportIdsNoHM.length > 0 && sportIdsNoHM.includes(e.sport)) return true;
+    return false;
+  };
+
   // When a debounced search query is active we bypass date selection and sport/fav
   // filters entirely — results come from ALL cached dates.
   const isSearching = debouncedSearch.trim().length > 0;
@@ -292,7 +317,7 @@ function App() {
   const filtered = events.
   filter((e) => stations.includes(e.station)).
   filter((e) => !favActive || isStarred(e)).
-  filter((e) => sportIds.length === 0 || sportIds.includes(e.sport));
+  filter(matchesSportFilter);
   // (search filtering handled separately below for cross-date results)
 
   // ── cross-date search ──
@@ -334,7 +359,7 @@ function App() {
         evs
           .filter((e) => stations.includes(e.station))
           .filter((e) => !favActive || isStarred(e))
-          .filter((e) => sportIds.length === 0 || sportIds.includes(e.sport))
+          .filter(matchesSportFilter)
           .map((e) => ({ ...e, _isoDate: isoDate }))
       )
       .sort((a, b) => (a.startIso || '').localeCompare(b.startIso || ''));
