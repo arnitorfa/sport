@@ -151,11 +151,18 @@ function MobileApp({ dark, onThemeChange }) {
     const hay = ((e.comp||'') + ' ' + (e.title||'') + ' ' + (e.sub||'')).toLowerCase();
     if (hay.includes('world cup') || hay.includes('heimsbikar') || hay.includes('fifa')) return true;
     if (/\bhm\b/.test(hay)) return true;
-    // RÚV shows WC matches with just "Team A - Team B" as title, empty comp/sub.
-    // During the WC window all RÚV football is WC programming.
-    if (e.station === 'ruv') {
-      const iso = e.startIso || '';
-      if (iso >= '2026-06-11' && iso < '2026-07-20') return true;
+    // RÚV: decode base64 image path and check for HM-specific filename patterns.
+    // Avoids false positives from Icelandic cup/league games (Fylkir, Grótta etc.)
+    // which also air on RÚV with empty comp/sub.
+    if (e.station === 'ruv' && e.image) {
+      try {
+        const b64 = e.image.replace(/^https?:\/\/[^/]+\//, '')
+                           .replace(/-/g, '+').replace(/_/g, '/');
+        const padded = b64 + '===='.slice(0, (4 - b64.length % 4) % 4);
+        const decoded = atob(padded).toLowerCase();
+        if (decoded.includes('hm_fotbolta') || decoded.includes('hm26') ||
+            decoded.includes('/hm_') || decoded.includes('/hm2')) return true;
+      } catch {}
     }
     return false;
   };

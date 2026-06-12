@@ -285,19 +285,26 @@ function App() {
   const favActive = selectedSports.has('fav');
   const sportIds = [...selectedSports].filter((s) => s !== 'fav');
 
-  // HM 2026 filter — matches football events with WC-related comp/title/sub,
-  // or any RÚV football event during the WC window (RÚV uses only team names
-  // as title with no comp field, so keyword matching alone misses actual matches).
+  // HM 2026 filter — matches WC football events.
+  // RÚV lists actual WC matches with only "Team A - Team B" as title and empty comp/sub,
+  // but WC images are named HM26_* or HM_fotbolta26_* in their CDN. We decode the
+  // base64 image URL to check the filename — this avoids false positives from Icelandic
+  // cup/league games (Fylkir, Grótta, etc.) which also air on RÚV with empty comp.
   const isWCEvent = (e) => {
     if (e.sport !== 'fb') return false;
     const hay = ((e.comp||'') + ' ' + (e.title||'') + ' ' + (e.sub||'')).toLowerCase();
     if (hay.includes('world cup') || hay.includes('heimsbikar') || hay.includes('fifa')) return true;
     if (/\bhm\b/.test(hay)) return true;
-    // RÚV shows WC matches with just "Team A - Team B" as title, empty comp/sub.
-    // During the WC window all RÚV football is WC programming.
-    if (e.station === 'ruv') {
-      const iso = e.startIso || '';
-      if (iso >= '2026-06-11' && iso < '2026-07-20') return true;
+    // RÚV: decode base64 image path and check for HM-specific filename patterns
+    if (e.station === 'ruv' && e.image) {
+      try {
+        const b64 = e.image.replace(/^https?:\/\/[^/]+\//, '')
+                           .replace(/-/g, '+').replace(/_/g, '/');
+        const padded = b64 + '===='.slice(0, (4 - b64.length % 4) % 4);
+        const decoded = atob(padded).toLowerCase();
+        if (decoded.includes('hm_fotbolta') || decoded.includes('hm26') ||
+            decoded.includes('/hm_') || decoded.includes('/hm2')) return true;
+      } catch {}
     }
     return false;
   };
