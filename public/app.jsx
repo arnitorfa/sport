@@ -270,6 +270,9 @@ function App() {
   const toggleSport = (id) => {
     if (id === 'all') { setSelectedSports(new Set()); return; }
     const next = new Set(selectedSports);
+    // hm2026 and fb are mutually exclusive — selecting one deselects the other
+    if (id === 'hm2026') next.delete('fb');
+    else if (id === 'fb') next.delete('hm2026');
     next.has(id) ? next.delete(id) : next.add(id);
     setSelectedSports(next);
   };
@@ -388,7 +391,7 @@ function App() {
   const live = todayEvents
     .filter((e) => stations.includes(e.station))
     .filter((e) => !favActive || isStarred(e))
-    .filter((e) => sportIds.length === 0 || sportIds.includes(e.sport))
+    .filter(matchesSportFilter)
     .filter((e) => e.status === 'live');
 
   // Timeline includes live events so they remain visible in the main list

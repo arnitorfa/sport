@@ -131,6 +131,9 @@ function MobileApp({ dark, onThemeChange }) {
   const toggleSport = (id) => {
     if (id === 'all') { setSelectedSports(new Set()); return; }
     const next = new Set(selectedSports);
+    // hm2026 and fb are mutually exclusive — selecting one deselects the other
+    if (id === 'hm2026') next.delete('fb');
+    else if (id === 'fb') next.delete('hm2026');
     next.has(id) ? next.delete(id) : next.add(id);
     setSelectedSports(next);
   };
