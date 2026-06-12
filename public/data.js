@@ -4,18 +4,18 @@
 
 window.IF_DATA = (function () {
   const sports = [
-    // ── Primary row (always visible) ─────────────────────────────────────────
+    // ── Primary row (always visible) — 9 sports + Fleiri = 10 slots ──────────
     { id: 'all',       name: 'Allt' },
-    { id: 'hm2026',    name: 'HM 2026' },
     { id: 'fav',       name: 'Uppáhalds' },
+    { id: 'hm2026',    name: 'HM 2026' },
     { id: 'fb',        name: 'Fótbolti' },
     { id: 'hb',        name: 'Handbolti' },
     { id: 'kb',        name: 'Körfubolti' },
-    { id: 'amfb',      name: 'NFL' },
     { id: 'f1',        name: 'Akstursiþróttir' },
     { id: 'golf',      name: 'Golf' },
     { id: 'mma',       name: 'Bardagaíþróttir' },
-    // ── Secondary row (Fleiri) ────────────────────────────────────────────────
+    // ── Secondary rows (Fleiri) — row 2: 10 items, row 3: remaining ──────────
+    { id: 'amfb',      name: 'NFL',              secondary: true },
     { id: 'hockey',    name: 'Íshokkí',          secondary: true },
     { id: 'ski',       name: 'Vetraríþróttir',   secondary: true },
     { id: 'snooker',   name: 'Snóker',           secondary: true },
@@ -25,13 +25,13 @@ window.IF_DATA = (function () {
     { id: 'gym',       name: 'Fimleikar',        secondary: true },
     { id: 'chess',     name: 'Skák',             secondary: true },
     { id: 'padel',     name: 'Padel',            secondary: true },
-    { id: 'rowing',    name: 'Ruðningur',        secondary: true },
     { id: 'volleyball',name: 'Blak',             secondary: true },
     { id: 'swimming',  name: 'Sund',             secondary: true },
     { id: 'athletics', name: 'Frjálsar',         secondary: true },
-    { id: 'tennis',    name: 'Tennis',            secondary: true },
-    { id: 'cycling',   name: 'Hjólreiðar',        secondary: true },
-    { id: 'other',     name: 'Óflokkað',          secondary: true },
+    { id: 'tennis',    name: 'Tennis',           secondary: true },
+    { id: 'cycling',   name: 'Hjólreiðar',       secondary: true },
+    { id: 'other',     name: 'Óflokkað',         secondary: true },
+    { id: 'rowing',    name: 'Ruðningur',        secondary: true },
   ];
 
   const stations = [
