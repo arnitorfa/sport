@@ -62,15 +62,16 @@ function detectSport(flokkur, title) {
       text.includes('khl'))
     return 'hockey';
 
-  if (text.includes('formula') || text.includes(' f1') ||
-      text.includes('grand prix') || text.includes('motogp') ||
+  if (text.includes('formula') || text.includes('formúla') || text.includes(' f1') ||
+      text.includes('f1:') || text.includes('grand prix') || text.includes('motogp') ||
       text.includes('indycar') || text.includes('mótorsport') ||
       text.includes('motorsport') || text.includes('nascar') ||
       text.includes('rally') || text.includes('wrc') || text.includes('superbike'))
     return 'f1';
 
   if (text.includes('mma') || text.includes('ufc') ||
-      text.includes('boxing') || text.includes('boksíþróttir'))
+      text.includes('boxing') || text.includes('boksíþróttir') ||
+      text.includes('icebox') || text.includes('bardaga') || text.includes('bardagiþróttir'))
     return 'mma';
 
   if (text.includes('ski') || text.includes('slalom') ||
@@ -96,8 +97,8 @@ function detectSport(flokkur, title) {
   if (text.includes('frjálsar íþróttir') || text.includes('athletics') ||
       text.includes('maraþon') || text.includes('marathon')) return 'athletics';
 
-  if (text.includes('rugby') || text.includes('nfl') ||
-      text.includes('american football') || text.includes('six nations')) return 'rugby';
+  if (text.includes('nfl') || text.includes('american football')) return 'amfb';
+  if (text.includes('rugby') || text.includes('six nations')) return 'rugby';
 
   return 'fb'; // default
 }
@@ -143,7 +144,10 @@ function normalizeEvent(ev, channel, isKki = false) {
     hour: '2-digit', minute: '2-digit', timeZone: 'Atlantic/Reykjavik',
   });
 
-  const sport = isKki ? 'kb' : detectSport(ev.flokkur, ev.titill);
+  // Pass both titill ("Formúla 1") and isltitill ("F1: Barcelona - Æfing 2") so
+  // detectSport sees the full event context (e.g. "f1:" in the Icelandic subtitle).
+  const sportText = [ev.titill, ev.isltitill, ev.undirtitill].filter(Boolean).join(' ');
+  const sport = isKki ? 'kb' : detectSport(ev.flokkur, sportText);
 
   const matchTitle = ev.isltitill || ev.undirtitill || ev.titill || '';
   const compTitle = (ev.isltitill && ev.titill && ev.isltitill !== ev.titill)
