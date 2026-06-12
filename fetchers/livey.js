@@ -33,8 +33,9 @@ const SUB_CATEGORY_MAP = {
   pool:               'pool',
   gymnastics:         'gym',
   weightlifting:      'gym',
+  volleyball:         'volleyball',
   rugby:              'rugby',
-  'american football':'rugby',
+  'american football':'amfb',
   motorsport:         'f1',
   rally:              'f1',
   skiing:             'ski',
@@ -67,7 +68,9 @@ function detectSport(category, subCategory, title) {
   if (text.includes('fimleikar') || text.includes('gymnastics') || text.includes('weightlifting')) return 'gym';
   if (text.includes('cycling') || text.includes('hjólreiðar') || text.includes('tour de france')) return 'cycling';
   if (text.includes('athletics') || text.includes('frjálsar íþróttir') || text.includes('marathon')) return 'athletics';
-  if (text.includes('rugby') || text.includes('nfl')) return 'rugby';
+  if (text.includes('volleyball') || text.includes('blaksamband') || text.includes('blakbolti')) return 'volleyball';
+  if (text.includes('rugby')) return 'rugby';
+  if (text.includes('nfl') || text.includes('american football')) return 'amfb';
   return 'fb'; // default
 }
 
