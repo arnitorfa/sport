@@ -294,6 +294,7 @@ function App() {
   // base64 image URL to check the filename — this avoids false positives from Icelandic
   // cup/league games (Fylkir, Grótta, etc.) which also air on RÚV with empty comp.
   const isWCEvent = (e) => {
+    if (e.sport === 'hm2026') return true;   // handvirkt HM-merkt (t.d. Dr. Football)
     if (e.sport !== 'fb') return false;
     const hay = ((e.comp||'') + ' ' + (e.title||'') + ' ' + (e.sub||'')).toLowerCase();
     if (hay.includes('world cup') || hay.includes('heimsbikar') || hay.includes('fifa')) return true;

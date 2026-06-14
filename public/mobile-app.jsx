@@ -150,6 +150,7 @@ function MobileApp({ dark, onThemeChange }) {
   const favActive = selectedSports.has('fav');
   const sportIds = [...selectedSports].filter((s) => s !== 'fav');
   const isWCEvent = (e) => {
+    if (e.sport === 'hm2026') return true;   // handvirkt HM-merkt (t.d. Dr. Football)
     if (e.sport !== 'fb') return false;
     const hay = ((e.comp||'') + ' ' + (e.title||'') + ' ' + (e.sub||'')).toLowerCase();
     if (hay.includes('world cup') || hay.includes('heimsbikar') || hay.includes('fifa')) return true;

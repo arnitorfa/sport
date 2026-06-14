@@ -52,6 +52,11 @@ window.IF_DATA = (function () {
       mark: { kind: 'mono',   text: 'lívey' },
       defaultLogos: { forLight: 'assets/logos/livey-black.svg', forDark: 'assets/logos/livey-black.svg' },
       logoScale: 0.68 },
+    { id: 'youtube', name: 'YouTube',       short: 'YT',      bg: '#FF0000', fg: '#FFFFFF',
+      mark: { kind: 'mono',   text: 'YouTube' },
+      defaultLogos: { forLight: 'assets/logos/youtube.svg', forDark: 'assets/logos/youtube.svg' },
+      logoScale: 1.1,
+      link: 'https://www.youtube.com/@Dr.FootballPodcast' },
   ];
 
   // Build 10 dates: yesterday + today + 8 ahead, based on real current date.

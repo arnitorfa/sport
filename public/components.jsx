@@ -46,7 +46,7 @@ function StationLogo({ station, size = 'sm', logoUrl, isDark = false }) {
     // Default logos are black SVGs. Invert to white on dark backgrounds.
     // User-uploaded logos (data: URLs) keep their original colours.
     const needsInvert = isDark && !logoUrl.startsWith('data:');
-    return (
+    const imgEl = (
       <span style={{
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
         height: dims.h, padding: `0 ${size === 'lg' ? 8 : 6}px`,
@@ -58,6 +58,16 @@ function StationLogo({ station, size = 'sm', logoUrl, isDark = false }) {
                       filter: needsInvert ? 'invert(1) brightness(2)' : 'none' }} />
       </span>
     );
+    if (station.link) {
+      return (
+        <a href={station.link} target="_blank" rel="noopener noreferrer"
+           title={`Opna ${station.name}`}
+           style={{ display: 'inline-flex', textDecoration: 'none' }}>
+          {imgEl}
+        </a>
+      );
+    }
+    return imgEl;
   }
 
   const baseStyle = {

@@ -63,6 +63,45 @@ async function fetchAllEvents(date) {
   return sortEvents(deduped);
 }
 
+// ── Dr. Football — handvirk YouTube dagskrárfærsla ─────────────────────────
+// "Góðan daginn Epic Ameríka" á YouTube rásinni Dr. Football
+// Birtist á öllum virkum dögum (Mán–Fös) á meðan HM 2026 er í gangi.
+const WC_START = '2026-06-11';
+const WC_END   = '2026-07-20';
+
+function drFootballEvent(dateStr) {
+  // Aðeins á HM-tímabilinu
+  if (dateStr < WC_START || dateStr > WC_END) return null;
+  // Aðeins virkir dagar (1=Mán, 5=Fös)
+  const dow = new Date(dateStr + 'T12:00:00Z').getUTCDay();
+  if (dow === 0 || dow === 6) return null; // helgar
+
+  const now = new Date();
+  const start = new Date(dateStr + 'T10:00:00Z'); // 10:00 Íslandstími (UTC+0)
+  const end   = new Date(dateStr + 'T11:00:00Z');
+  let status = 'upcoming';
+  if (start <= now && now < end) status = 'live';
+  else if (end < now) status = 'done';
+
+  return {
+    id: `drfootball-${dateStr}`,
+    time: '10:00',
+    endTime: '11:00',
+    startIso: start.toISOString(),
+    endIso:   end.toISOString(),
+    sport: 'hm2026',
+    station: 'youtube',
+    channelName: 'YouTube',
+    title: 'Góðan daginn Epic Ameríka',
+    sub: 'Dr. Football',
+    comp: 'Dr. Football Podcast',
+    status,
+    subjects: [{ key: 'c:drfootball', label: 'Dr. Football', type: 'comp' }],
+    image: null,
+    sourceUrl: 'https://www.youtube.com/@Dr.FootballPodcast',
+  };
+}
+
 // ── Vercel handler ──────────────────────────────────────────────────────────
 export default async function handler(req, res) {
   // CORS headers
@@ -94,6 +133,11 @@ export default async function handler(req, res) {
     console.log(`Fetching events for ${dateStr}...`);
     const date = new Date(dateStr + 'T00:00:00Z');
     const events = await fetchAllEvents(date);
+
+    // Bæta við Dr. Football YouTube þætti ef við á
+    const drFb = drFootballEvent(dateStr);
+    if (drFb) events.push(drFb);
+    sortEvents(events);
 
     console.log(`Total events for ${dateStr}: ${events.length}`);
 
