@@ -188,7 +188,7 @@ function normalizeProduct(product) {
     status,
     subjects: buildSubjects(title, formatTitle, sport),
     image: imageUrl,
-    sourceUrl: `https://viaplay.is/${publicPath}`,
+    sourceUrl: 'https://viaplay.is/is-is/',
   };
 }
 

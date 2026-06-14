@@ -124,7 +124,7 @@ function normalizeEvent(ev) {
     status,
     subjects,
     image: ev.eventPhotoUrl || ev.smallEventPhotoUrl || null,
-    sourceUrl: `https://watch.livey.events`,
+    sourceUrl: 'https://livey.is/',
   };
 }
 

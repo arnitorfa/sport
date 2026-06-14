@@ -171,7 +171,7 @@ function normalizeEvent(ev, channel, isKki = false) {
     live: true,
     subjects: buildSubjects(ev, sport),
     image: null,
-    sourceUrl: 'https://www.syn.is/sjonvarp/dagskra',
+    sourceUrl: null,
   };
 }
 

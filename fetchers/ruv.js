@@ -164,7 +164,7 @@ function normalizeEvent(ev, channel) {
     status,
     subjects: buildSubjects(title, subtitle, description, sport),
     image: ev.image || null,
-    sourceUrl: `https://www.ruv.is/sjonvarp/dagskra/${channel}`,
+    sourceUrl: `https://www.ruv.is/sjonvarp/beint/${channel}`,
   };
 }
 

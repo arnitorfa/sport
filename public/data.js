@@ -55,8 +55,7 @@ window.IF_DATA = (function () {
     { id: 'youtube', name: 'YouTube',       short: 'YT',      bg: '#FF0000', fg: '#FFFFFF',
       mark: { kind: 'mono',   text: 'YouTube' },
       defaultLogos: { forLight: 'assets/logos/youtube.svg', forDark: 'assets/logos/youtube.svg' },
-      logoScale: 1.1,
-      link: 'https://www.youtube.com/@Dr.FootballPodcast' },
+      logoScale: 1.1 },
   ];
 
   // Build 10 dates: yesterday + today + 8 ahead, based on real current date.
