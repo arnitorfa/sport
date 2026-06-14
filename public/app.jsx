@@ -769,7 +769,12 @@ function App() {
             fontWeight: 800, letterSpacing: '0.16em' }}>LIVE</span>
           }
         </div>
-        <div style={ifS.evTitle}>{ev.title}</div>
+        <div style={ifS.evTitle}>
+          {ev.sourceUrl
+            ? <a href={ev.sourceUrl} target="_blank" rel="noopener noreferrer"
+                 style={{ color: 'inherit', textDecoration: 'none' }}>{ev.title}</a>
+            : ev.title}
+        </div>
         <div style={ifS.evSub}>{ev.sub}</div>
         {matchedSubs.length > 0 &&
         <div style={ifS.followLine}>
@@ -1094,12 +1099,22 @@ function App() {
                     borderRadius: 3
                   }}>LIVE</div>
                 </div>
-                <div style={ifS.liveTitle}>{ev.title}</div>
+                <div style={ifS.liveTitle}>
+                  {ev.sourceUrl
+                    ? <a href={ev.sourceUrl} target="_blank" rel="noopener noreferrer"
+                         style={{ color: 'inherit', textDecoration: 'none' }}>{ev.title}</a>
+                    : ev.title}
+                </div>
                 <div style={ifS.liveSub2}>{ev.sub}</div>
                 <div style={{ display: 'flex', alignItems: 'center',
                   justifyContent: 'space-between', marginTop: 4 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <StationLogo station={st} size="sm" logoUrl={logoFor(st)} isDark={isDark} />
+                    {ev.sourceUrl
+                      ? <a href={ev.sourceUrl} target="_blank" rel="noopener noreferrer"
+                           style={{ display: 'inline-flex', textDecoration: 'none' }}>
+                          <StationLogo station={st} size="sm" logoUrl={logoFor(st)} isDark={isDark} />
+                        </a>
+                      : <StationLogo station={st} size="sm" logoUrl={logoFor(st)} isDark={isDark} />}
                     {ev.channelName && (
                       <span style={{ fontSize: 10.5, fontWeight: 700, color: pal.muted, letterSpacing: '0.04em' }}>
                         {ev.channelName}
@@ -1143,7 +1158,12 @@ function App() {
                   <div style={ifS.evRight}>
                     <div style={ifS.evRow2}>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-                        <StationLogo station={st} size="sm" logoUrl={logoFor(st)} isDark={isDark} />
+                        {ev.sourceUrl
+                          ? <a href={ev.sourceUrl} target="_blank" rel="noopener noreferrer"
+                               style={{ display: 'inline-flex', textDecoration: 'none' }}>
+                              <StationLogo station={st} size="sm" logoUrl={logoFor(st)} isDark={isDark} />
+                            </a>
+                          : <StationLogo station={st} size="sm" logoUrl={logoFor(st)} isDark={isDark} />}
                         {ev.channelName && (
                           <div style={{ fontSize: 9, color: pal.muted, fontWeight: 600,
                             letterSpacing: '0.06em', textAlign: 'right', lineHeight: 1 }}>

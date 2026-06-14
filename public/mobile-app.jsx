@@ -730,7 +730,10 @@ function MEventCard({ ev, D, pal, isDark, live, done, stationObj, sportObj, isSt
       </div>
 
       <div style={{ fontSize: 15.5, fontWeight: 700, lineHeight: 1.2, letterSpacing: '-0.01em' }}>
-        {ev.title}
+        {ev.sourceUrl
+          ? <a href={ev.sourceUrl} target="_blank" rel="noopener noreferrer"
+               style={{ color: 'inherit', textDecoration: 'none' }}>{ev.title}</a>
+          : ev.title}
       </div>
       {ev.sub && (
         <div style={{ fontSize: 12, color: pal.muted, marginTop: 2, lineHeight: 1.3 }}>
@@ -741,7 +744,12 @@ function MEventCard({ ev, D, pal, isDark, live, done, stationObj, sportObj, isSt
       {/* bottom: station + channel + followed subjects */}
       <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px dashed ${pal.hair}`,
                     display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        {st && <StationLogo station={st} size="sm" logoUrl={logoFor(st)} isDark={isDark} />}
+        {st && (ev.sourceUrl
+          ? <a href={ev.sourceUrl} target="_blank" rel="noopener noreferrer"
+               style={{ display: 'inline-flex', textDecoration: 'none' }}>
+              <StationLogo station={st} size="sm" logoUrl={logoFor(st)} isDark={isDark} />
+            </a>
+          : <StationLogo station={st} size="sm" logoUrl={logoFor(st)} isDark={isDark} />)}
         {ev.channelName && (
           <span style={{ fontSize: 10.5, fontWeight: 700, color: pal.muted,
                          letterSpacing: '0.04em' }}>

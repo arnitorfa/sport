@@ -58,15 +58,6 @@ function StationLogo({ station, size = 'sm', logoUrl, isDark = false }) {
                       filter: needsInvert ? 'invert(1) brightness(2)' : 'none' }} />
       </span>
     );
-    if (station.link) {
-      return (
-        <a href={station.link} target="_blank" rel="noopener noreferrer"
-           title={`Opna ${station.name}`}
-           style={{ display: 'inline-flex', textDecoration: 'none' }}>
-          {imgEl}
-        </a>
-      );
-    }
     return imgEl;
   }
 
