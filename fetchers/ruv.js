@@ -168,43 +168,68 @@ function normalizeEvent(ev, channel) {
   };
 }
 
+async function fetchRuvChannel(channel, queryDateStr, keepDateStr, fetch) {
+  // Fetch RÚV schedule for a given query date and return events that
+  // actually start on keepDateStr (Reykjavík time).
+  const events = [];
+  try {
+    const resp = await fetch(GQL_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Origin': 'https://www.ruv.is',
+      },
+      body: JSON.stringify({
+        query: SCHEDULE_QUERY,
+        variables: { channel, date: queryDateStr },
+      }),
+    });
+    if (!resp.ok) {
+      console.warn(`RÚV fetch failed for ${channel} (${queryDateStr}): HTTP ${resp.status}`);
+      return events;
+    }
+    const data = await resp.json();
+    const raw = data?.data?.Schedule?.events || [];
+    console.log(`RÚV ${channel} (${queryDateStr}): ${raw.length} events total`);
+    for (const ev of raw) {
+      const normalized = normalizeEvent(ev, channel);
+      if (!normalized) continue;
+      const evStartDate = new Date(ev.start_time)
+        .toLocaleDateString('sv-SE', { timeZone: 'Atlantic/Reykjavik' });
+      if (evStartDate !== keepDateStr) continue;
+      events.push(normalized);
+    }
+  } catch (err) {
+    console.error(`RÚV fetch error for ${channel} (${queryDateStr}):`, err.message);
+  }
+  return events;
+}
+
 export async function fetchRuvSchedule(date, fetch) {
   const dateStr = date.toISOString().slice(0, 10);
+
+  // RÚV uses a "broadcast day" that runs roughly 06:00–05:59 the next calendar day.
+  // A match starting at 00:45 on the 16th appears in the *15th's* schedule response.
+  // Fix: also query the previous day and keep any events that start on dateStr.
+  const prevDate = new Date(date);
+  prevDate.setUTCDate(prevDate.getUTCDate() - 1);
+  const prevDateStr = prevDate.toISOString().slice(0, 10);
+
   const channels = ['ruv', 'ruv2'];
   const allEvents = [];
+  const seen = new Set();
 
   for (const channel of channels) {
-    try {
-      const resp = await fetch(GQL_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Origin': 'https://www.ruv.is',
-        },
-        body: JSON.stringify({
-          query: SCHEDULE_QUERY,
-          variables: { channel, date: dateStr },
-        }),
-      });
-      if (!resp.ok) {
-        console.warn(`RÚV fetch failed for ${channel}: HTTP ${resp.status}`);
-        continue;
+    // Query current day and previous day in parallel
+    const [curr, prev] = await Promise.all([
+      fetchRuvChannel(channel, dateStr,     dateStr, fetch),
+      fetchRuvChannel(channel, prevDateStr, dateStr, fetch),
+    ]);
+    for (const ev of [...curr, ...prev]) {
+      if (!seen.has(ev.id)) {
+        seen.add(ev.id);
+        allEvents.push(ev);
       }
-      const data = await resp.json();
-      const events = data?.data?.Schedule?.events || [];
-      console.log(`RÚV ${channel}: ${events.length} events total`);
-      for (const ev of events) {
-        const normalized = normalizeEvent(ev, channel);
-        if (!normalized) continue;
-        // Only keep events that actually start on the requested date (Reykjavík time).
-        // RÚV's GraphQL API can include post-midnight events in the previous day's results.
-        const evStartDate = new Date(ev.start_time)
-          .toLocaleDateString('sv-SE', { timeZone: 'Atlantic/Reykjavik' });
-        if (evStartDate !== dateStr) continue;
-        allEvents.push(normalized);
-      }
-    } catch (err) {
-      console.error(`RÚV fetch error for ${channel}:`, err.message);
     }
   }
 
