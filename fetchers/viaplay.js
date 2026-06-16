@@ -34,6 +34,10 @@ const VIAPLAY_SPORT_MAP = {
   'rally':              'f1',
   'wrc':                'f1',
   'touring-car':        'f1',
+  'hestamennska':       'hesta', // horse racing / equestrian
+  'horse-racing':       'hesta',
+  'horseracing':        'hesta',
+  'equestrian':         'hesta',
   'tennis':             'tennis',
   'golf':               'golf',
   'mma':                'mma',

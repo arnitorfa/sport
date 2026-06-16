@@ -41,6 +41,8 @@ const SPORT_KEYWORDS = {
   f1:        ['formúla 1', 'formula 1', 'grand prix', 'motogp', 'indycar',
               'mótorsport', 'motorsport', 'nascar', 'rally', 'rallycross',
               'superbike', 'wrc', 'dakar'],
+  hesta:     ['royal ascot', 'horse racing', 'hestakeppni', 'hestamennska',
+              'equestrian', 'thoroughbred'],
   tennis:    ['tennis', 'wimbledon', 'roland garros', 'atp', 'wta'],
   golf:      ['golf', 'pga tour', 'masters golf', 'ryder cup'],
   mma:       [' mma ', 'boksíþróttir', ' ufc ', 'boxing'],

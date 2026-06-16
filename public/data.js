@@ -30,6 +30,7 @@ window.IF_DATA = (function () {
     { id: 'athletics', name: 'Frjálsar',         secondary: true },
     { id: 'tennis',    name: 'Tennis',           secondary: true },
     { id: 'cycling',   name: 'Hjólreiðar',       secondary: true },
+    { id: 'hesta',     name: 'Hestaíþróttir',    secondary: true },
     { id: 'other',     name: 'Óflokkað',         secondary: true },
     { id: 'rowing',    name: 'Ruðningur',        secondary: true },
   ];
@@ -368,6 +369,16 @@ window.IF_DATA = (function () {
           <path d="M21.94,20.27c-1.66,0-1.66-1.28-3.31-1.28s-1.66,1.28-3.31,1.28-1.66-1.28-3.31-1.28-1.66,1.28-3.31,1.28-1.66-1.28-3.31-1.28-1.66,1.28-3.31,1.28"/>
           <circle cx="19.44" cy="10.2" r="2.2"/>
         `);
+      case 'hesta':
+        // Hestaíþróttir — custom icon (19.59×19.77 viewBox, keeps original proportions)
+        return `<svg viewBox="0 0 19.59 19.77" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="2.3" y1="5.65" x2="4.97" y2="5.65"/>
+          <path d="M1.14,7.88h2.6c.9,0,1.75-.43,2.29-1.14,1.39-1.8,4.64-5.33,9.94-4.37l1.67-.96s-.03,1.16-.71,1.8c.02.03,1.47,2.74,2.09,3.9.16.3.07.66-.21.85l-.34.24c-.24.17-.56.14-.78-.05l-1.07-.99c-.82-.05-2.97-.16-2.97-2.31"/>
+          <path d="M11.9,10.32c.41-2.77,2.04-4.21,2.04-4.21"/>
+          <path d="M.5,15.65c1.77.42,4.28.64,6.71-.39"/>
+          <path d="M10.27,8.91c1.48.41,2.18,1.84,1.55,3.43-.09.22-.41.75-.6,1.06l3.82-.45s.09,0,.14,0c.46,0,.88.27,1.06.7.15.36.12.77-.1,1.09l-2.21,3.35c-.3.45-.78.76-1.32.84l-1.2.17-1.95.18.48-1.13c.25-.6.85-.97,1.49-.93l.83.05,1.12-2.01-4.42.38c-.44.04-.87-.17-1.1-.55l-.73-1.17"/>
+          <path d="M15.97,2.37l-1.42-1.28c-.51-.46-1.2-.66-1.88-.57-1.41.2-2.77.68-4.05,1.46-.36.22-.71.45-1.03.69-.89.67-1.98,1.01-3.1,1.01h-1.23"/>
+        </svg>`;
       case 'other':
         // 3D box / cube
         return wrap(`

@@ -68,6 +68,9 @@ function detectSport(flokkur, title) {
       text.includes('motorsport') || text.includes('nascar') ||
       text.includes('rally') || text.includes('wrc') || text.includes('superbike'))
     return 'f1';
+  if (text.includes('royal ascot') || text.includes('horse racing') ||
+      text.includes('hestakeppni') || text.includes('hestamennska'))
+    return 'hesta';
 
   if (text.includes('mma') || text.includes('ufc') ||
       text.includes('boxing') || text.includes('boksíþróttir') ||

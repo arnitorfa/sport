@@ -62,6 +62,8 @@ function detectSport(category, subCategory, title) {
       text.includes('icebox') || text.includes('bardaga') || text.includes('bardagiþróttir')) return 'mma';
   if (text.includes('formula') || text.includes('grand prix') || text.includes('motogp') ||
       text.includes('motorsport') || text.includes('rally') || text.includes('nascar')) return 'f1';
+  if (text.includes('royal ascot') || text.includes('horse racing') ||
+      text.includes('hestakeppni') || text.includes('hestamennska')) return 'hesta';
   if (text.includes('snooker')) return 'snooker';
   if (text.includes('darts') || text.includes('pílukast')) return 'darts';
   if (text.includes('baseball') || text.includes('hafnabolti')) return 'baseball';
