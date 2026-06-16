@@ -72,6 +72,9 @@ const WC_END   = '2026-07-20';
 function drFootballEvent(dateStr) {
   // Aðeins á HM-tímabilinu
   if (dateStr < WC_START || dateStr > WC_END) return null;
+  // Undanþágudagar — þættir sem falla niður
+  const SKIP_DATES = new Set(['2026-06-17']);
+  if (SKIP_DATES.has(dateStr)) return null;
   // Aðeins virkir dagar (1=Mán, 5=Fös)
   const dow = new Date(dateStr + 'T12:00:00Z').getUTCDay();
   if (dow === 0 || dow === 6) return null; // helgar
