@@ -16,6 +16,7 @@ const VIAPLAY_SPORT_MAP = {
   'körfubolti':         'kb',
   'basketball':         'kb',
   'motorsport':         'f1',
+  'mtorsport':          'f1',   // Viaplay publicPath typo (missing "o") — confirmed in API
   'motogp':             'f1',
   'moto2':              'f1',
   'moto3':              'f1',
@@ -88,7 +89,9 @@ function detectViaplaySport(publicPath, title, seriesTitle) {
   if (t.includes('superbike') || t.includes('worldsbk') || t.includes('wsbk')) return 'f1';
   if (t.includes('formula') || t.includes('grand prix') || t.includes('motogp') ||
       t.includes('nascar') || t.includes('indycar') || t.includes('rally') ||
-      t.includes('motorsport') || t.includes('mótorsport') || t.includes('dtm')) return 'f1';
+      t.includes('motorsport') || t.includes('mótorsport') || t.includes('dtm') ||
+      t.includes('indy nxt') || t.includes('adac gt4') || t.includes('ferrari challenge') ||
+      t.includes('gt4') || t.includes('gt3') || t.includes('gt world challenge')) return 'f1';
   if (t.includes('football') || t.includes('fótbolti') || t.includes('premier league') ||
       t.includes('champions league') || t.includes('bundesliga')) return 'fb';
   if (t.includes('tennis')) return 'tennis';
