@@ -34,6 +34,17 @@ function App() {
 
   // ── state ──
   const [theme, setTheme] = React.useState(() => readLS(LS.theme, 'dark'));
+  // Timezone display mode: 'country' = the schedule's country time (Iceland),
+  // 'local' = the viewer's own timezone (from the browser). Persisted.
+  const [tzMode, setTzModeRaw] = React.useState(() => readLS(LS.tz, 'country'));
+  const setTzMode = (m) => { setTzModeRaw(m); writeLS(LS.tz, m); };
+  const localTz = React.useMemo(() => D.localTimeZone(), []);
+  const countryTz = D.COUNTRY_TZ.is;
+  const activeTz = tzMode === 'local' ? localTz : countryTz;
+  // Format an event's UTC start/end into the active timezone (fallback to the
+  // server-formatted string if startIso is somehow missing).
+  const evTime = (ev) => D.formatTime(ev.startIso, activeTz) || ev.time;
+  const evEndTime = (ev) => D.formatTime(ev.endIso, activeTz) || ev.endTime;
   const [date, setDate] = React.useState(0);
   const [allDates, setAllDates] = React.useState(false);
   // Multi-select sport filter. Empty set = no sport filter ("Allt" highlighted).
@@ -879,6 +890,23 @@ function App() {
           }
         </button>
 
+        {/* Timezone toggle */}
+        <button
+          style={{ ...ifS.iconBtn, width: 'auto', padding: '0 11px', gap: 6,
+                   fontSize: 12.5, fontWeight: 600, letterSpacing: '-0.01em' }}
+          onClick={() => setTzMode(tzMode === 'local' ? 'country' : 'local')}
+          title={tzMode === 'local'
+            ? `Sýni tíma á þínu tímabelti (${D.tzCity(localTz)}). Smelltu til að sýna íslenskan tíma.`
+            : `Sýni íslenskan dagskrártíma. Smelltu til að sýna tíma á þínu tímabelti (${D.tzCity(localTz)}).`}
+          aria-label="Skipta um tímabelti">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M3 12h18" />
+            <path d="M12 3a15 15 0 0 1 0 18 M12 3a15 15 0 0 0 0 18" />
+          </svg>
+          <span>{tzMode === 'local' ? 'Minn tími' : 'Ísland'}</span>
+        </button>
+
         {/* Ko-fi donate */}
         <a href="https://ko-fi.com/torfason" target="_blank" rel="noopener noreferrer"
            title="Styðja SportZone á Ko-fi"
@@ -1075,7 +1103,7 @@ function App() {
                   }}>
                     <SportIcon id={ev.sport} size={18} strokeWidth={1.6} />
                   </div>
-                  <div style={ifS.liveTime}>{ev.time} – {ev.endTime}</div>
+                  <div style={ifS.liveTime}>{evTime(ev)} – {evEndTime(ev)}</div>
                   {liveSessionType && (
                     <span style={{
                       marginLeft: 4, padding: '2px 6px', borderRadius: 3,
@@ -1148,8 +1176,8 @@ function App() {
               return (
                 <div key={ev.id} className="if-evcard" style={{ ...ifS.evRow, opacity: isDone ? 0.38 : 1 }}>
                   <div style={ifS.timeBlock}>
-                    <div style={ifS.timeBig}>{ev.time}</div>
-                    <div style={ifS.timeEnd}>til {ev.endTime}</div>
+                    <div style={ifS.timeBig}>{evTime(ev)}</div>
+                    <div style={ifS.timeEnd}>til {evEndTime(ev)}</div>
                   </div>
                   <div style={ifS.evIcon}>
                     <SportIcon id={ev.sport} size={isMobile ? 20 : 32} strokeWidth={1.4} />

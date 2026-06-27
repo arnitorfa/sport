@@ -11,6 +11,7 @@ const LS = {
   fav:   'if_v2_favorites',
   theme: 'if_v2_theme',
   user:  'if_v2_user',
+  tz:    'if_v2_tz',
 };
 
 function readLS(k, fallback) {

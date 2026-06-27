@@ -407,14 +407,50 @@ window.IF_DATA = (function () {
     }
   }
 
-  // Real-time countdown based on actual clock.
-  // eventTime: 'HH:MM', status: 'live' | 'upcoming' | 'done'
-  function countdown(eventTime, status) {
+  // ── Timezone helpers ───────────────────────────────────────────────────────
+  // Each event carries a UTC ISO timestamp (startIso/endIso). Display time is
+  // computed here so we can render it in whichever timezone the viewer chooses.
+  //
+  // Each country maps to a canonical IANA timezone. ALWAYS use IANA names with
+  // Intl — never a fixed +N offset — so daylight-saving time is handled for us.
+  // Iceland is UTC+0 all year (no DST).
+  const COUNTRY_TZ = { is: 'Atlantic/Reykjavik' };
+  const DEFAULT_TZ = 'Atlantic/Reykjavik';
+
+  // The viewer's own timezone, detected from the browser.
+  function localTimeZone() {
+    try { return Intl.DateTimeFormat().resolvedOptions().timeZone || DEFAULT_TZ; }
+    catch (e) { return DEFAULT_TZ; }
+  }
+
+  // Format a UTC ISO timestamp as "HH:MM" in the given IANA timezone.
+  function formatTime(iso, timeZone) {
+    if (!iso) return '';
+    try {
+      return new Intl.DateTimeFormat('is-IS', {
+        hour: '2-digit', minute: '2-digit', hour12: false,
+        timeZone: timeZone || DEFAULT_TZ,
+      }).format(new Date(iso));
+    } catch (e) { return ''; }
+  }
+
+  // Short, human label for a timezone — the city part, e.g.
+  // "Atlantic/Reykjavik" → "Reykjavík", "Europe/Copenhagen" → "Copenhagen".
+  function tzCity(timeZone) {
+    if (!timeZone) return '';
+    const city = timeZone.split('/').pop().replace(/_/g, ' ');
+    return city === 'Reykjavik' ? 'Reykjavík' : city;
+  }
+
+  // Real-time countdown based on the actual clock.
+  // startIso: UTC ISO timestamp, status: 'live' | 'upcoming' | 'done'.
+  // Works off absolute time, so it is independent of the display timezone.
+  function countdown(startIso, status) {
     if (status === 'live') return 'Í gangi';
-    const now = new Date();
-    const nowMin = now.getHours() * 60 + now.getMinutes();
-    const [h, m] = eventTime.split(':').map(Number);
-    let diff = h * 60 + m - nowMin;
+    if (!startIso || typeof startIso !== 'string' || !startIso.includes('T')) return '';
+    const start = new Date(startIso);
+    if (isNaN(start.getTime())) return '';
+    const diff = Math.round((start.getTime() - Date.now()) / 60000);
     if (diff <= 0) return 'Í gangi';
     if (diff < 60) return `í ${diff} mín`;
     const hr = Math.round(diff / 60);
@@ -429,5 +465,7 @@ window.IF_DATA = (function () {
   const SUPABASE_URL  = 'https://kbmjtondcqupdsumgyex.supabase.co';
   const SUPABASE_ANON = 'sb_publishable_Ash-Au72xRzfvPTuSS4jHw_vsugN-Qz';
 
-  return { sports, stations, dates, events, sportIcon, countdown, formatDateIs, SUPABASE_URL, SUPABASE_ANON };
+  return { sports, stations, dates, events, sportIcon, countdown, formatDateIs,
+           COUNTRY_TZ, DEFAULT_TZ, localTimeZone, formatTime, tzCity,
+           SUPABASE_URL, SUPABASE_ANON };
 })();

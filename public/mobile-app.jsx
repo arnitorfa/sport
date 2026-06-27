@@ -11,6 +11,12 @@ function MobileApp({ dark, onThemeChange }) {
 
   // ── state ──────────────────────────────────────────────────────────────────
   const [date, setDate] = React.useState(0); // offset: -1=yesterday, 0=today, 1=tomorrow …
+  // Timezone display mode: 'country' = Iceland schedule time, 'local' = viewer's
+  // own timezone (browser-detected). Persisted across sessions.
+  const [tzMode, setTzModeRaw] = React.useState(() => readLS(LS.tz, 'country'));
+  const setTzMode = (m) => { setTzModeRaw(m); writeLS(LS.tz, m); };
+  const localTz = React.useMemo(() => D.localTimeZone(), []);
+  const activeTz = tzMode === 'local' ? localTz : D.COUNTRY_TZ.is;
   const [selectedSports, setSelectedSportsRaw] = React.useState(() => new Set());
   const setSelectedSports = (n) => setSelectedSportsRaw(new Set(n));
   const [stations, setStations] = React.useState(D.stations.map((s) => s.id));
@@ -261,6 +267,21 @@ function MobileApp({ dark, onThemeChange }) {
             <line x1="14" y1="1" x2="14" y2="4"/>
           </svg>
         </a>
+        <button
+          onClick={() => setTzMode(tzMode === 'local' ? 'country' : 'local')}
+          aria-label="Skipta um tímabelti"
+          style={{ ...mIconBtn(pal), width: 'auto', padding: '0 9px', gap: 5,
+                   fontSize: 12, fontWeight: 700, letterSpacing: '-0.01em',
+                   ...(tzMode === 'local'
+                     ? { background: pal.accent, borderColor: pal.accent, color: pal.accentFg }
+                     : {}) }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M3 12h18" />
+            <path d="M12 3a15 15 0 0 1 0 18 M12 3a15 15 0 0 0 0 18" />
+          </svg>
+          {tzMode === 'local' ? 'Minn' : 'Ísl'}
+        </button>
         <button onClick={() => setSearchOpen((s) => !s)} style={mIconBtn(pal)}>
           {searchOpen ? (
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
@@ -477,7 +498,7 @@ function MobileApp({ dark, onThemeChange }) {
             {live.map((ev) => (
               <MEventCard key={ev.id} ev={ev} D={D} pal={pal} isDark={isDark} live
                 stationObj={stationObj} sportObj={sportObj}
-                isStarred={isStarred} logoFor={logoFor} follows={follows}
+                isStarred={isStarred} logoFor={logoFor} follows={follows} activeTz={activeTz}
                 onStarTap={() => setStarSheetFor(ev.id)} />
             ))}
           </>
@@ -491,7 +512,7 @@ function MobileApp({ dark, onThemeChange }) {
             {upcoming.map((ev) => (
               <MEventCard key={ev.id} ev={ev} D={D} pal={pal} isDark={isDark}
                 stationObj={stationObj} sportObj={sportObj}
-                isStarred={isStarred} logoFor={logoFor} follows={follows}
+                isStarred={isStarred} logoFor={logoFor} follows={follows} activeTz={activeTz}
                 onStarTap={() => setStarSheetFor(ev.id)} />
             ))}
           </>
@@ -503,7 +524,7 @@ function MobileApp({ dark, onThemeChange }) {
             {done.map((ev) => (
               <MEventCard key={ev.id} ev={ev} D={D} pal={pal} isDark={isDark} done
                 stationObj={stationObj} sportObj={sportObj}
-                isStarred={isStarred} logoFor={logoFor} follows={follows}
+                isStarred={isStarred} logoFor={logoFor} follows={follows} activeTz={activeTz}
                 onStarTap={() => setStarSheetFor(ev.id)} />
             ))}
           </>
@@ -664,7 +685,7 @@ function MSectionHeader({ pal, label, count, live, muted }) {
 
 // ── MEventCard ────────────────────────────────────────────────────────────────
 
-function MEventCard({ ev, D, pal, isDark, live, done, stationObj, sportObj, isStarred, logoFor, follows, onStarTap }) {
+function MEventCard({ ev, D, pal, isDark, live, done, stationObj, sportObj, isStarred, logoFor, follows, activeTz, onStarTap }) {
   const st = stationObj(ev.station);
   const sp = sportObj(ev.sport);
   const starred = isStarred(ev);
@@ -681,7 +702,7 @@ function MEventCard({ ev, D, pal, isDark, live, done, stationObj, sportObj, isSt
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
         <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 17, fontWeight: 700,
                        letterSpacing: '-0.02em' }}>
-          {ev.time}
+          {D.formatTime(ev.startIso, activeTz) || ev.time}
         </span>
         {live ? (
           <span style={{
@@ -695,12 +716,12 @@ function MEventCard({ ev, D, pal, isDark, live, done, stationObj, sportObj, isSt
           </span>
         ) : (
           <span style={{ fontSize: 11.5, color: pal.muted, fontWeight: 600, letterSpacing: '-0.005em' }}>
-            {D.countdown(ev.time, ev.status)}
+            {D.countdown(ev.startIso, ev.status)}
           </span>
         )}
         <span style={{ marginLeft: 'auto', fontSize: 10.5, color: pal.muted,
                        fontFamily: '"JetBrains Mono", monospace' }}>
-          til {ev.endTime}
+          til {D.formatTime(ev.endIso, activeTz) || ev.endTime}
         </span>
         <button onClick={onStarTap} style={{
           width: 28, height: 28, borderRadius: 8, cursor: 'pointer',
