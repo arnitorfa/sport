@@ -244,18 +244,20 @@ function MobileApp({ dark, onThemeChange }) {
 
       {/* ── HEADER ───────────────────────────────────────────────────────────── */}
       <div style={{
-        padding: '12px 16px 10px', display: 'flex',
-        alignItems: 'center', gap: 10,
+        padding: '12px 16px 10px',
         borderBottom: `1px solid ${pal.hair}`,
         position: 'sticky', top: 0, background: pal.bg, zIndex: 20,
+        display: 'flex', flexDirection: 'column', gap: 10,
       }}>
+        {/* logo row */}
         <img
           src={`assets/logos/sportzone-${isDark ? 'dark' : 'light'}.svg`}
           alt="SportZone"
           onClick={() => window.location.reload()}
-          style={{ height: 22, width: 'auto', display: 'block', cursor: 'pointer' }}
+          style={{ height: 24, width: 'auto', display: 'block', cursor: 'pointer' }}
         />
-        <div style={{ flex: 1 }} />
+        {/* button row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
         <a href="https://ko-fi.com/torfason" target="_blank" rel="noopener noreferrer"
            title="Styðja SportZone"
            style={{ ...mIconBtn(pal), textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -323,6 +325,7 @@ function MobileApp({ dark, onThemeChange }) {
             </svg>
           )}
         </button>
+        </div>
       </div>
 
       {/* ── SEARCH ───────────────────────────────────────────────────────────── */}
