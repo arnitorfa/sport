@@ -14,6 +14,9 @@ const LS = {
   tz:    'if_v2_tz',
 };
 
+// i18n shortcut (i18n.js + data.js load before this file).
+const T = (k, v) => (window.IF_DATA && window.IF_DATA.t ? window.IF_DATA.t(k, v) : k);
+
 function readLS(k, fallback) {
   try { const v = localStorage.getItem(k); return v == null ? fallback : JSON.parse(v); }
   catch { return fallback; }
@@ -170,8 +173,8 @@ function StarPopover({ event, follows, toggleFollow, onClose, anchor }) {
                                color: 'var(--if-muted)', marginTop: 2,
                                textTransform: 'uppercase', letterSpacing: '0.12em',
                                fontWeight: 600 }}>
-                  {sub.type === 'team' ? 'Lið / einstaklingur' :
-                   sub.type === 'comp' ? 'Keppni' : 'Mótaröð'}
+                  {sub.type === 'team' ? T('fav.team') :
+                   sub.type === 'comp' ? T('fav.comp') : T('fav.series')}
                 </span>
               </span>
             </label>
@@ -181,7 +184,7 @@ function StarPopover({ event, follows, toggleFollow, onClose, anchor }) {
       <div style={{ marginTop: 10, fontSize: 11, color: 'var(--if-muted)',
                     borderTop: '1px solid var(--if-hair)', paddingTop: 10,
                     lineHeight: 1.4 }}>
-        Þú færð allt sem þú fylgir sjálfkrafa í <strong style={{color:'var(--if-fg)'}}>Uppáhalds</strong>.
+        {T('fav.autoNotePre')}<strong style={{color:'var(--if-fg)'}}>{T('fav.title')}</strong>{T('fav.autoNotePost')}
       </div>
     </div>
   );
@@ -204,7 +207,7 @@ function LoginModal({ onClose, onLogin }) {
 
   const send = async () => {
     const trimmed = email.trim();
-    if (!trimmed.includes('@')) { setErr('Sláðu inn gilt netfang.'); return; }
+    if (!trimmed.includes('@')) { setErr(T('login.invalidEmail')); return; }
     setBusy(true); setErr('');
     const { error } = await _sb.auth.signInWithOtp({
       email: trimmed,
@@ -237,16 +240,16 @@ function LoginModal({ onClose, onLogin }) {
       <div style={overlay} onClick={onClose}>
         <div onClick={e => e.stopPropagation()} style={modalBox}>
           <div style={{ ...logo, background: 'var(--if-accent)' }}>✓</div>
-          <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Hlekkur sendur!</div>
+          <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>{T('login.sentHeading')}</div>
           <div style={{ fontSize: 13, color: 'var(--if-muted)', lineHeight: 1.6, marginBottom: 22 }}>
-            Við sendum þér hlekk á <strong>{email}</strong>.<br />
-            Athugaðu tölvupóstinn þinn og smelltu á hlekkinn til að skrá þig inn.
+            {T('login.sentToPre')}<strong>{email}</strong>.<br />
+            {T('login.checkEmail')}
           </div>
           <button onClick={onClose} style={{
             width: '100%', padding: '11px', borderRadius: 10,
             border: 'none', background: 'var(--if-accent)', color: 'var(--if-accent-fg)',
             fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-          }}>Loka</button>
+          }}>{T('login.close')}</button>
         </div>
       </div>
     );
@@ -259,12 +262,11 @@ function LoginModal({ onClose, onLogin }) {
              style={{ height: 22, width: 'auto', marginBottom: 18, display: 'block' }} />
         <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em',
                       lineHeight: 1.15, marginBottom: 8 }}>
-          Skráðu þig inn
+          {T('login.heading')}
         </div>
         <div style={{ fontSize: 13, color: 'var(--if-muted)', lineHeight: 1.5,
                       marginBottom: 22 }}>
-          Við sendum þér hlekk á tölvupóstinn þinn — ekkert lykilorð þarf.
-          Uppáhöldin þín vistast og eru tiltæk á öllum tækjum.
+          {T('login.blurb')}
         </div>
 
         <input
@@ -293,14 +295,14 @@ function LoginModal({ onClose, onLogin }) {
           opacity: busy ? 0.65 : 1, fontFamily: 'inherit',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
         }}>
-          {busy ? 'Sendi…' : (
+          {busy ? T('login.sending') : (
             <>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
                    stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
                 <polyline points="22,6 12,13 2,6"/>
               </svg>
-              Senda hlekk
+              {T('login.sendLink')}
             </>
           )}
         </button>
@@ -398,7 +400,7 @@ function LogoSettings({ stations, logos, setLogos, onClose }) {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr',
                               gap: 12 }}>
                   <LogoSlot
-                    label="Fyrir dökkt útlit" hint="Ljóst merki (oftast hvítt)"
+                    label={T('logo.forDark')} hint={T('logo.hintDark')}
                     bg="#0E0E0F"
                     url={entry.forDark || defD}
                     isCustom={!!entry.forDark}
@@ -406,7 +408,7 @@ function LogoSettings({ stations, logos, setLogos, onClose }) {
                     onClear={entry.forDark ? () => clearVariant(st.id, 'forDark') : null}
                   />
                   <LogoSlot
-                    label="Fyrir ljóst útlit" hint="Dökkt merki (oftast svart)"
+                    label={T('logo.forLight')} hint={T('logo.hintLight')}
                     bg="#FFFFFF"
                     url={entry.forLight || defL}
                     isCustom={!!entry.forLight}
@@ -449,7 +451,7 @@ function LogoSlot({ label, hint, bg, url, isCustom, onUpload, onClear }) {
         {isCustom && (
           <div style={{ fontSize: 9.5, color: 'var(--if-muted)',
                         textTransform: 'uppercase', letterSpacing: '0.14em',
-                        fontWeight: 700 }}>Eigið</div>
+                        fontWeight: 700 }}>{T('logo.own')}</div>
         )}
       </div>
       <div style={{
@@ -477,7 +479,7 @@ function LogoSlot({ label, hint, bg, url, isCustom, onUpload, onClear }) {
           background: 'var(--if-fg)', color: 'var(--if-bg)',
           border: 'none', fontSize: 11.5, fontWeight: 600, fontFamily: 'inherit',
         }}>
-          {isCustom ? 'Skipta' : 'Hlaða inn'}
+          {isCustom ? T('logo.replace') : T('logo.upload')}
         </button>
         {onClear && (
           <button onClick={onClear} style={{
@@ -511,7 +513,7 @@ function AdSlot({ width, height, format }) {
       <div style={{
         fontSize: 9.5, fontWeight: 800, letterSpacing: '0.24em',
         textTransform: 'uppercase', color: 'var(--if-muted)',
-      }}>Auglýsing</div>
+      }}>{T('ad.label')}</div>
       <div style={{
         marginTop: 10, fontSize: 28, fontWeight: 700,
         fontFamily: '"JetBrains Mono", monospace',

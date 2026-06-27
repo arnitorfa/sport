@@ -29,8 +29,12 @@ function getSessionType(title, sub) {
 // add 'logos' key to LS namespace
 LS.logos = 'if_v2_station_logos';
 
+// Internal session-type sentinels → i18n keys (motorsport labels).
+const SESSION_KEY = { 'Æfing': 'session.practice', 'Tímataka': 'session.qualifying', 'Keppni': 'session.race' };
+
 function App() {
   const D = window.IF_DATA;
+  const t = D.t;
 
   // ── state ──
   const [theme, setTheme] = React.useState(() => readLS(LS.theme, 'dark'));
@@ -114,7 +118,7 @@ function App() {
       })
       .catch((err) => {
         console.error('Failed to fetch events:', err);
-        setFetchError('Ekki tókst að sækja dagskrá. Reyndu aftur.');
+        setFetchError(t('error.fetch'));
         setLoading(false);
       });
   }, [date]);
@@ -757,7 +761,7 @@ function App() {
     return (
       <>
         <div style={ifS.evMeta}>
-          <span>{sp.name}</span>
+          <span>{D.sportName(sp.id)}</span>
           {sessionType && (
             <span style={{
               padding: '2px 7px', borderRadius: 3, fontSize: 9.5,
@@ -772,7 +776,7 @@ function App() {
                 : sessionType === 'Tímataka'
                   ? (isDark ? '#80C0FF' : '#1A60C0')
                   : pal.muted,
-            }}>{sessionType.toUpperCase()}</span>
+            }}>{(t(SESSION_KEY[sessionType]) || sessionType).toUpperCase()}</span>
           )}
           {ev.status === 'live' &&
           <span style={{ padding: '2px 7px', background: 'rgba(255,59,71,0.16)',
@@ -792,7 +796,7 @@ function App() {
             <svg width="11" height="11" viewBox="0 0 24 24" fill={pal.fg} aria-hidden="true">
               <path d="M12 2 L14.6 9 L21 9.7 L16.3 14 L17.7 20.5 L12 17 L6.3 20.5 L7.7 14 L3 9.7 L9.4 9 Z" />
             </svg>
-            <span>Þú fylgir</span>
+            <span>{t('follow.youFollow')}</span>
             {matchedSubs.slice(0, 2).map((s) =>
           <span key={s.key} style={ifS.followPill}>{s.label}</span>
           )}
@@ -825,7 +829,7 @@ function App() {
             }}>{follows.size}</span>
           )}
         </div>
-        <span style={ifS.sportChipLabel(active)}>{sp.name}</span>
+        <span style={ifS.sportChipLabel(active)}>{D.sportName(sp.id)}</span>
       </button>
     );
   };
@@ -848,7 +852,7 @@ function App() {
             src={`assets/logos/sportzone-${isDark ? 'dark' : 'light'}.svg`}
             alt="SportZone"
             onClick={() => window.location.reload()}
-            title="Endurhlaða síðuna"
+            title={t('nav.reload')}
             style={{ height: 28, width: 'auto', display: 'block', cursor: 'pointer' }}
           />
         </div>
@@ -859,7 +863,7 @@ function App() {
           </svg>
           <input
             style={ifS.searchInput}
-            placeholder="Leita að liði, íþrótt, keppni…"
+            placeholder={t('search.placeholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Escape') { setSearch(''); setDebouncedSearch(''); e.target.blur(); } }} />
@@ -868,7 +872,7 @@ function App() {
                     style={{ background: 'none', border: 'none', cursor: 'pointer',
                       color: pal.muted, fontSize: 16, lineHeight: 1, padding: '0 2px',
                       display: 'flex', alignItems: 'center' }}
-                    aria-label="Hreinsa leit">×</button>
+                    aria-label={t('search.clear')}>×</button>
           ) : (
             <span style={ifS.kbd}>⌘ K</span>
           )}
@@ -877,7 +881,7 @@ function App() {
         {/* Theme toggle */}
         <button style={ifS.iconBtn}
         onClick={() => setTheme(isDark ? 'light' : 'dark')}
-        aria-label="Skipta um þema">
+        aria-label={t('nav.themeToggle')}>
           {isDark ?
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="4" />
@@ -896,20 +900,20 @@ function App() {
                    fontSize: 12.5, fontWeight: 600, letterSpacing: '-0.01em' }}
           onClick={() => setTzMode(tzMode === 'local' ? 'country' : 'local')}
           title={tzMode === 'local'
-            ? `Sýni tíma á þínu tímabelti (${D.tzCity(localTz)}). Smelltu til að sýna íslenskan tíma.`
-            : `Sýni íslenskan dagskrártíma. Smelltu til að sýna tíma á þínu tímabelti (${D.tzCity(localTz)}).`}
-          aria-label="Skipta um tímabelti">
+            ? t('tz.tipToCountry', { city: D.tzCity(localTz) })
+            : t('tz.tipToLocal', { city: D.tzCity(localTz) })}
+          aria-label={t('nav.tzToggle')}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="9" />
             <path d="M3 12h18" />
             <path d="M12 3a15 15 0 0 1 0 18 M12 3a15 15 0 0 0 0 18" />
           </svg>
-          <span>{tzMode === 'local' ? 'Minn tími' : 'Ísland'}</span>
+          <span>{tzMode === 'local' ? t('tz.local') : t('tz.country')}</span>
         </button>
 
         {/* Ko-fi donate */}
         <a href="https://ko-fi.com/torfason" target="_blank" rel="noopener noreferrer"
-           title="Styðja SportZone á Ko-fi"
+           title={t('nav.kofi')}
            style={{ ...ifS.iconBtn, textDecoration: 'none' }}>
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
@@ -929,7 +933,7 @@ function App() {
               <path fill="#FBBC05" d="M24 44a20 20 0 0 0 13.4-5l-6.2-5.2c-1.9 1.3-4.4 2.2-7.2 2.2a12 12 0 0 1-11.3-8l-6.6 5.1A20 20 0 0 0 24 44z" />
               <path fill="#EA4335" d="M43.6 20.5H42V20H24v8h11.3a12 12 0 0 1-4.1 5.6l6.2 5.2C41.4 35.8 44 30.4 44 24c0-1.2-.1-2.4-.4-3.5z" />
             </svg>
-            Skrá inn
+            {t('nav.signIn')}
           </button> :
 
         <div style={{ position: 'relative' }}>
@@ -958,7 +962,7 @@ function App() {
               border: 'none', background: 'transparent', textAlign: 'left',
               color: pal.fg, fontSize: 12.5, cursor: 'pointer',
               fontFamily: 'inherit', marginTop: 2,
-            }}>Skrá út</button>
+            }}>{t('nav.signOut')}</button>
               </div>
           }
           </div>
@@ -979,10 +983,10 @@ function App() {
               flexShrink: 0,
             }}
             onClick={() => { setAllDates((v) => !v); setSearch(''); setDebouncedSearch(''); }}>
-              <div style={ifS.dateCellWk(allDates)}>ALLAR</div>
+              <div style={ifS.dateCellWk(allDates)}>{t('datestrip.all')}</div>
               <div style={{ ...ifS.dateCellD, fontSize: isMobile ? 16 : 20, lineHeight: 1.1, marginTop: 2 }}>∞</div>
-              <div style={ifS.dateCellLbl(allDates)}>DAGSET.</div>
-              <div style={ifS.dateCellCount(allDates)}>{totalAll} viðb.</div>
+              <div style={ifS.dateCellLbl(allDates)}>{t('datestrip.allLabel')}</div>
+              <div style={ifS.dateCellCount(allDates)}>{totalAll} {t('unit.events')}</div>
             </div>
           );
         })()}
@@ -997,7 +1001,7 @@ function App() {
               {d.label ?
               <div style={ifS.dateCellLbl(active)}>{d.label}</div> :
               <div style={ifS.dateCellLbl(active)}>&nbsp;</div>}
-              <div style={ifS.dateCellCount(active)}>{cnt} viðb.</div>
+              <div style={ifS.dateCellCount(active)}>{cnt} {t('unit.events')}</div>
             </div>);
 
         })}
@@ -1023,7 +1027,7 @@ function App() {
                 </svg>
               </div>
               <span style={ifS.sportChipLabel(false)}>
-                {moreSportsOpen ? 'Loka' : 'Fleiri'}
+                {moreSportsOpen ? t('picker.close') : t('picker.more')}
               </span>
             </button>
           )}
@@ -1041,7 +1045,7 @@ function App() {
 
       {/* ── STATION FILTER ── */}
       <div style={ifS.stationBar}>
-        <div style={ifS.stationLbl}>Stöðvar</div>
+        <div style={ifS.stationLbl}>{t('section.stations')}</div>
         {D.stations.map((st) => {
           const active = stations.includes(st.id);
           return (
@@ -1079,7 +1083,7 @@ function App() {
         <div style={ifS.livePane}>
           <div style={ifS.liveHd}>
             <span style={ifS.liveDot} />
-            <span style={ifS.liveLabel}>Í beinni núna</span>
+            <span style={ifS.liveLabel}>{t('section.live')}</span>
             <span style={ifS.liveSub}>{live.length}</span>
           </div>
           {live.length === 0 &&
@@ -1231,7 +1235,7 @@ function App() {
                     )}
                   </div>
                   {(!allDatesGroups || totalHits === 0) && (
-                    <div style={ifS.timelineEmpty}>Engir viðburðir fundust með þessum síum.</div>
+                    <div style={ifS.timelineEmpty}>{t('empty.filters')}</div>
                   )}
                   {allDatesGroups && allDatesGroups.map((group) => (
                     <div key={group.date}>
@@ -1269,7 +1273,7 @@ function App() {
                     )}
                   </div>
                   {(!searchGroups || totalSearchHits === 0) && (
-                    <div style={ifS.timelineEmpty}>Engir viðburðir fundust fyrir „{debouncedSearch}".</div>
+                    <div style={ifS.timelineEmpty}>{t('empty.search', { q: debouncedSearch })}</div>
                   )}
                   {searchGroups && searchGroups.map((group) => (
                     <div key={group.date}>
@@ -1309,8 +1313,8 @@ function App() {
                 {!loading && !fetchError && upcoming.length === 0 && doneEvents.length === 0 && (
                   <div style={ifS.timelineEmpty}>
                     {favActive && filtered.length === 0
-                      ? 'Þú átt engin uppáhalds enn. Smelltu á stjörnu hjá viðburði til að bæta við.'
-                      : 'Engir íþróttaviðburðir fundust á þessum degi.'}
+                      ? t('empty.favs')
+                      : t('empty.day')}
                   </div>
                 )}
                 {!loading && upcoming.map(renderEvRow)}
@@ -1325,7 +1329,7 @@ function App() {
                       <span style={{
                         fontSize: 10, fontWeight: 800, letterSpacing: '0.22em',
                         textTransform: 'uppercase', color: pal.muted,
-                      }}>Liðnir atburðir</span>
+                      }}>{t('section.doneLong')}</span>
                       <span style={{ fontSize: 10.5, color: pal.muted,
                         fontFamily: '"JetBrains Mono", monospace' }}>
                         {doneEvents.length}

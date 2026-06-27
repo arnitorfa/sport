@@ -7,6 +7,7 @@ const { StationLogo, SportIcon, LoginModal, resolveLogoUrl, readLS, writeLS, LS 
 
 function MobileApp({ dark, onThemeChange }) {
   const D = window.IF_DATA;
+  const t = D.t;
   const isDark = dark;
 
   // ── state ──────────────────────────────────────────────────────────────────
@@ -259,7 +260,7 @@ function MobileApp({ dark, onThemeChange }) {
         {/* button row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
         <a href="https://ko-fi.com/torfason" target="_blank" rel="noopener noreferrer"
-           title="Styðja SportZone"
+           title={t('nav.kofi')}
            style={{ ...mIconBtn(pal), textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
@@ -271,7 +272,7 @@ function MobileApp({ dark, onThemeChange }) {
         </a>
         <button
           onClick={() => setTzMode(tzMode === 'local' ? 'country' : 'local')}
-          aria-label="Skipta um tímabelti"
+          aria-label={t('nav.tzToggle')}
           style={{ ...mIconBtn(pal), width: 'auto', padding: '0 9px', gap: 5,
                    fontSize: 12, fontWeight: 700, letterSpacing: '-0.01em',
                    ...(tzMode === 'local'
@@ -282,7 +283,7 @@ function MobileApp({ dark, onThemeChange }) {
             <path d="M3 12h18" />
             <path d="M12 3a15 15 0 0 1 0 18 M12 3a15 15 0 0 0 0 18" />
           </svg>
-          {tzMode === 'local' ? 'Minn' : 'Ísl'}
+          {tzMode === 'local' ? t('tz.localShort') : t('tz.countryShort')}
         </button>
         <button onClick={() => setSearchOpen((s) => !s)} style={mIconBtn(pal)}>
           {searchOpen ? (
@@ -303,7 +304,7 @@ function MobileApp({ dark, onThemeChange }) {
             {user.initial}
           </button>
         ) : (
-          <button onClick={() => setShowLogin(true)} style={mIconBtn(pal)} title="Skrá inn">
+          <button onClick={() => setShowLogin(true)} style={mIconBtn(pal)} title={t('nav.signIn')}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
               <circle cx="12" cy="7" r="4"/>
@@ -336,7 +337,7 @@ function MobileApp({ dark, onThemeChange }) {
         }}>
           <input
             autoFocus
-            placeholder="Leita að liði, íþrótt, keppni…"
+            placeholder={t('search.placeholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Escape') { setSearch(''); setSearchOpen(false); } }}
@@ -433,10 +434,10 @@ function MobileApp({ dark, onThemeChange }) {
                            textTransform: 'uppercase', overflow: 'hidden',
                            textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {sportIds.length === 0
-                ? 'Íþróttir'
+                ? t('mobile.sportsAll')
                 : sportIds.length === 1
-                  ? (sportObj(sportIds[0])?.name || 'Íþrótt')
-                  : `Íþróttir · ${sportIds.length}`}
+                  ? (D.sportName(sportIds[0]) || t('mobile.sportOne'))
+                  : `${t('mobile.sportsAll')} · ${sportIds.length}`}
             </span>
           </span>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
@@ -491,13 +492,13 @@ function MobileApp({ dark, onThemeChange }) {
       <div style={{ padding: '8px 14px 32px' }}>
         {loadingEvents && (
           <div style={{ color: pal.muted, padding: '40px 0', textAlign: 'center', fontSize: 13 }}>
-            Sæki dagskrá…
+            {t('loading.schedule')}
           </div>
         )}
 
         {!loadingEvents && live.length > 0 && (
           <>
-            <MSectionHeader pal={pal} live label="Í beinni núna" count={live.length} />
+            <MSectionHeader pal={pal} live label={t('section.live')} count={live.length} />
             {live.map((ev) => (
               <MEventCard key={ev.id} ev={ev} D={D} pal={pal} isDark={isDark} live
                 stationObj={stationObj} sportObj={sportObj}
@@ -510,7 +511,7 @@ function MobileApp({ dark, onThemeChange }) {
         {!loadingEvents && upcoming.length > 0 && (
           <>
             <MSectionHeader pal={pal}
-              label={isToday ? 'Framundan í dag' : 'Dagskrá'}
+              label={isToday ? t('section.upcomingToday') : t('section.schedule')}
               count={upcoming.length} />
             {upcoming.map((ev) => (
               <MEventCard key={ev.id} ev={ev} D={D} pal={pal} isDark={isDark}
@@ -523,7 +524,7 @@ function MobileApp({ dark, onThemeChange }) {
 
         {!loadingEvents && done.length > 0 && (
           <>
-            <MSectionHeader pal={pal} label="Liðið" count={done.length} muted />
+            <MSectionHeader pal={pal} label={t('section.done')} count={done.length} muted />
             {done.map((ev) => (
               <MEventCard key={ev.id} ev={ev} D={D} pal={pal} isDark={isDark} done
                 stationObj={stationObj} sportObj={sportObj}
@@ -536,7 +537,7 @@ function MobileApp({ dark, onThemeChange }) {
         {!loadingEvents && filtered.length === 0 && (
           <div style={{ color: pal.muted, padding: 40, textAlign: 'center',
                         fontSize: 13, lineHeight: 1.5 }}>
-            Engir viðburðir passa við valið.
+            {t('empty.mobile')}
           </div>
         )}
       </div>
@@ -655,7 +656,7 @@ function MSportChip({ sp, pal, active, showCount, count, onClick }) {
       <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.08em',
                      textTransform: 'uppercase', textAlign: 'center', lineHeight: 1.1,
                      whiteSpace: 'nowrap' }}>
-        {sp.name}
+        {window.IF_DATA.sportName(sp.id)}
       </span>
     </button>
   );
@@ -749,7 +750,7 @@ function MEventCard({ ev, D, pal, isDark, live, done, stationObj, sportObj, isSt
         </span>
         <span style={{ fontSize: 10.5, fontWeight: 700, color: pal.muted,
                        textTransform: 'uppercase', letterSpacing: '0.12em' }}>
-          {sp ? sp.name : ev.sport}
+          {sp ? D.sportName(sp.id) : ev.sport}
         </span>
       </div>
 
@@ -787,7 +788,7 @@ function MEventCard({ ev, D, pal, isDark, live, done, stationObj, sportObj, isSt
               <path d="M12 2L14.6 9L21 9.7L16.3 14L17.7 20.5L12 17L6.3 20.5L7.7 14L3 9.7L9.4 9Z"/>
             </svg>
             <span style={{ fontSize: 10.5, color: pal.fg, fontWeight: 700 }}>
-              Þú fylgir {matchedSubs[0].label}{matchedSubs.length > 1 ? ` +${matchedSubs.length - 1}` : ''}
+              {D.t('follow.youFollow')} {matchedSubs[0].label}{matchedSubs.length > 1 ? ` +${matchedSubs.length - 1}` : ''}
             </span>
           </>
         )}
@@ -814,7 +815,7 @@ function MDatePicker({ D, pal, date, onPick, onClose }) {
         <div style={{ width: 36, height: 4, borderRadius: 99, background: pal.hair2,
                       margin: '0 auto 14px' }} />
         <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: '-0.01em', marginBottom: 12 }}>
-          Veldu dagsetningu
+          {D.t('picker.pickDate')}
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 }}>
           {D.dates.map((d) => {
@@ -874,7 +875,7 @@ function MSportPicker({ D, pal, selectedSports, toggle, clearAll, onClose }) {
         <div style={{ display: 'flex', alignItems: 'baseline',
                       justifyContent: 'space-between', marginBottom: 4 }}>
           <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: '-0.01em' }}>
-            Veldu íþróttir
+            {D.t('picker.pickSports')}
           </div>
           {sel.length > 0 && (
             <button onClick={clearAll} style={{
@@ -904,7 +905,7 @@ function MSportPicker({ D, pal, selectedSports, toggle, clearAll, onClose }) {
                 <SportIcon id={sp.id} size={30} strokeWidth={1.5} />
                 <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.08em',
                                textTransform: 'uppercase', lineHeight: 1.1, textAlign: 'center' }}>
-                  {sp.name}
+                  {D.sportName(sp.id)}
                 </span>
                 {active && (
                   <span style={{
@@ -928,7 +929,7 @@ function MSportPicker({ D, pal, selectedSports, toggle, clearAll, onClose }) {
           border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer',
           fontFamily: 'inherit', letterSpacing: '0.02em',
         }}>
-          {sel.length === 0 ? 'Sýna allt' : `Sýna ${sel.length} ${sel.length === 1 ? 'íþrótt' : 'íþróttir'}`}
+          {sel.length === 0 ? D.t('picker.showAll') : `${D.t('picker.show')} ${sel.length} ${sel.length === 1 ? D.t('unit.sportOne') : D.t('unit.sportMany')}`}
         </button>
       </div>
     </div>
@@ -996,8 +997,8 @@ function MSubjectPicker({ event, follows, toggleFollow, pal, onClose }) {
                   </div>
                   <div style={{ fontSize: 10, color: pal.muted, marginTop: 3,
                                 textTransform: 'uppercase', letterSpacing: '0.14em', fontWeight: 700 }}>
-                    {sub.type === 'team' ? 'Lið / einstaklingur'
-                      : sub.type === 'comp' ? 'Keppni' : 'Mótaröð'}
+                    {sub.type === 'team' ? window.IF_DATA.t('fav.team')
+                      : sub.type === 'comp' ? window.IF_DATA.t('fav.comp') : window.IF_DATA.t('fav.series')}
                   </div>
                 </span>
               </button>
@@ -1010,7 +1011,7 @@ function MSubjectPicker({ event, follows, toggleFollow, pal, onClose }) {
           border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer',
           fontFamily: 'inherit', letterSpacing: '0.02em',
         }}>
-          Loka
+          {window.IF_DATA.t('picker.close')}
         </button>
       </div>
     </div>

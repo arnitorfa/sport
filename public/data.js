@@ -59,13 +59,18 @@ window.IF_DATA = (function () {
       logoScale: 1.1 },
   ];
 
+  // i18n helpers (i18n.js loads before data.js). Fall back gracefully if absent.
+  const I18N = window.IF_I18N;
+  const t  = (k, v) => (I18N ? I18N.t(k, v) : k);
+  const tArr = (k, fallback) => (I18N ? I18N.arr(k) : fallback);
+
   // Build 10 dates: yesterday + today + 8 ahead, based on real current date.
   function buildDates() {
     const out = [];
     const base = new Date();
     // Reset to midnight in Iceland time (UTC+0)
     base.setUTCHours(0, 0, 0, 0);
-    const weekdays = ['Sun', 'Mán', 'Þri', 'Mið', 'Fim', 'Fös', 'Lau'];
+    const weekdays = tArr('weekdayShort', ['Sun', 'Mán', 'Þri', 'Mið', 'Fim', 'Fös', 'Lau']);
     for (let i = -1; i <= 8; i++) {
       const d = new Date(base);
       d.setUTCDate(base.getUTCDate() + i);
@@ -76,28 +81,37 @@ window.IF_DATA = (function () {
         month: d.getUTCMonth() + 1,
         year: d.getUTCFullYear(),
         isoDate: d.toISOString().slice(0, 10),
-        label: i === 0 ? 'Í dag' : i === 1 ? 'Á morgun' : i === -1 ? 'Í gær' : null,
+        label: i === 0 ? t('date.today') : i === 1 ? t('date.tomorrow') : i === -1 ? t('date.yesterday') : null,
       });
     }
     return out;
   }
   const dates = buildDates();
 
-  // ── Icelandic date formatter (no browser locale dependency) ──────────────
-  const _weekdaysFull = ['Sunnudagur','Mánudagur','Þriðjudagur','Miðvikudagur','Fimmtudagur','Föstudagur','Laugardagur'];
-  const _monthsFull   = ['janúar','febrúar','mars','apríl','maí','júní','júlí','ágúst','september','október','nóvember','desember'];
+  // ── Localized date formatter (no browser locale dependency) ──────────────
+  const _weekdaysFull = () => tArr('weekdayFull', ['Sunnudagur','Mánudagur','Þriðjudagur','Miðvikudagur','Fimmtudagur','Föstudagur','Laugardagur']);
+  const _monthsFull   = () => tArr('monthFull', ['janúar','febrúar','mars','apríl','maí','júní','júlí','ágúst','september','október','nóvember','desember']);
 
   // Returns e.g. "Mánudagur, 27. maí" or "Í dag" / "Á morgun" / "Í gær"
   function formatDateIs(isoDate) {
+    const wd = _weekdaysFull(), mo = _monthsFull();
     // Check if it matches a known relative date
     const known = dates.find((d) => d.isoDate === isoDate);
     if (known && known.label) {
       // label is 'Í dag' / 'Á morgun' / 'Í gær' — append weekday for clarity
       const d = new Date(isoDate + 'T00:00:00Z');
-      return `${known.label} — ${_weekdaysFull[d.getUTCDay()]}, ${d.getUTCDate()}. ${_monthsFull[d.getUTCMonth()]}`;
+      return `${known.label} — ${wd[d.getUTCDay()]}, ${d.getUTCDate()}. ${mo[d.getUTCMonth()]}`;
     }
     const d = new Date(isoDate + 'T00:00:00Z');
-    return `${_weekdaysFull[d.getUTCDay()]}, ${d.getUTCDate()}. ${_monthsFull[d.getUTCMonth()]}`;
+    return `${wd[d.getUTCDay()]}, ${d.getUTCDate()}. ${mo[d.getUTCMonth()]}`;
+  }
+
+  // Localized sport-category name (falls back to the Icelandic name in `sports`).
+  function sportName(id) {
+    const v = t('sport.' + id);
+    if (v && v !== 'sport.' + id) return v;
+    const s = sports.find((x) => x.id === id);
+    return s ? s.name : id;
   }
 
   // ── Sport icon (monoline outline) ──────────────────────────────────────────
@@ -466,6 +480,7 @@ window.IF_DATA = (function () {
   const SUPABASE_ANON = 'sb_publishable_Ash-Au72xRzfvPTuSS4jHw_vsugN-Qz';
 
   return { sports, stations, dates, events, sportIcon, countdown, formatDateIs,
+           sportName, t,
            COUNTRY_TZ, DEFAULT_TZ, localTimeZone, formatTime, tzCity,
            SUPABASE_URL, SUPABASE_ANON };
 })();
