@@ -19,10 +19,26 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // Import fetchers (relative to /app/ inside the container)
 import { fetchRuvSchedule }    from './fetchers/ruv.js';
-import { fetchViaplaySchedule } from './fetchers/viaplay.js';
+import { fetchViaplaySchedule, fetchViaplaySeSchedule } from './fetchers/viaplay.js';
 import { fetchSynSchedule }    from './fetchers/syn.js';
 import { fetchSiminnSchedule } from './fetchers/siminn.js';
 import { fetchLiveySchedule }  from './fetchers/livey.js';
+import { fetchTvnuSchedule }   from './fetchers/tvnu.js';
+
+// ── Country → fetcher registry ─────────────────────────────────────────────
+const COUNTRY_FETCHERS = {
+  is: [
+    { name: 'RÚV',        fn: fetchRuvSchedule },
+    { name: 'Viaplay',    fn: fetchViaplaySchedule },
+    { name: 'Sýn',        fn: fetchSynSchedule },
+    { name: 'Síminn',     fn: fetchSiminnSchedule },
+    { name: 'Lívey',      fn: fetchLiveySchedule },
+  ],
+  se: [
+    { name: 'Viaplay SE', fn: fetchViaplaySeSchedule },
+    { name: 'tv.nu',      fn: fetchTvnuSchedule },
+  ],
+};
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -70,27 +86,20 @@ function sortEvents(events) {
 }
 
 // ── Fetch all events for a date ─────────────────────────────────────────────
-async function fetchAllEvents(date) {
+async function fetchAllEvents(date, country = 'is') {
   const f = globalThis.fetch; // Node 18+ native fetch
+  const fetchers = COUNTRY_FETCHERS[country] || COUNTRY_FETCHERS.is;
 
-  const results = await Promise.allSettled([
-    fetchRuvSchedule(date, f),
-    fetchViaplaySchedule(date, f),
-    fetchSynSchedule(date, f),
-    fetchSiminnSchedule(date, f),
-    fetchLiveySchedule(date, f),
-  ]);
+  const results = await Promise.allSettled(fetchers.map(({ fn }) => fn(date, f)));
 
   const allEvents = [];
-  const sources = ['RÚV', 'Viaplay', 'Sýn', 'Síminn', 'Lívey'];
-
   for (let i = 0; i < results.length; i++) {
     const result = results[i];
     if (result.status === 'fulfilled') {
-      console.log(`${sources[i]}: ${result.value.length} events`);
+      console.log(`${fetchers[i].name}: ${result.value.length} events`);
       allEvents.push(...result.value);
     } else {
-      console.error(`${sources[i]} failed:`, result.reason?.message);
+      console.error(`${fetchers[i].name} failed:`, result.reason?.message);
     }
   }
 
@@ -101,6 +110,11 @@ async function fetchAllEvents(date) {
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() });
+});
+
+// Country pages — same SPA, country detected client-side from the URL path
+app.get('/se', (req, res) => {
+  res.sendFile(join(frontendPath, 'index.html'));
 });
 
 app.get('/api/events', async (req, res) => {
@@ -114,20 +128,23 @@ app.get('/api/events', async (req, res) => {
       return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD.' });
     }
 
-    const cached = getCached(dateStr);
+    const country = COUNTRY_FETCHERS[req.query.country] ? req.query.country : 'is';
+    const cacheKey = `${country}:${dateStr}`;
+
+    const cached = getCached(cacheKey);
     if (cached) {
-      console.log(`Cache hit for ${dateStr}`);
-      return res.json({ date: dateStr, events: cached, cached: true });
+      console.log(`Cache hit for ${cacheKey}`);
+      return res.json({ date: dateStr, country, events: cached, cached: true });
     }
 
-    console.log(`Fetching events for ${dateStr}...`);
+    console.log(`Fetching events for ${dateStr} (${country})...`);
     const date = new Date(dateStr + 'T00:00:00Z');
-    const events = await fetchAllEvents(date);
+    const events = await fetchAllEvents(date, country);
 
-    setCached(dateStr, events);
-    console.log(`Total events for ${dateStr}: ${events.length}`);
+    setCached(cacheKey, events);
+    console.log(`Total events for ${dateStr} (${country}): ${events.length}`);
 
-    res.json({ date: dateStr, events, cached: false });
+    res.json({ date: dateStr, country, events, cached: false });
   } catch (err) {
     console.error('Error fetching events:', err);
     res.status(500).json({ error: 'Failed to fetch schedule', message: err.message });

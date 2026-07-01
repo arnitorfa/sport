@@ -35,7 +35,39 @@ window.IF_DATA = (function () {
     { id: 'rowing',    name: 'Ruðningur',        secondary: true },
   ];
 
-  const stations = [
+  // ── Country layer ──────────────────────────────────────────────────────────
+  // Active country is detected in i18n.js (URL path /se or ?country=se).
+  // It decides which stations are shown, which timezone is "country time",
+  // and which country the backend aggregates events for.
+  const I18N_ = window.IF_I18N;
+  const country = (I18N_ && I18N_.country) || 'is';
+  const countries = (I18N_ && I18N_.COUNTRIES) || {
+    is: { id: 'is', name: 'Ísland', flag: '🇮🇸', path: '/', lang: 'is' },
+  };
+
+  // Backend API URL for a given ISO date, scoped to the active country.
+  function eventsUrl(isoDate) {
+    return `/api/events?date=${isoDate}&country=${country}`;
+  }
+
+  const stationsByCountry = {
+    is: null, // filled below (the original Icelandic list)
+    se: [
+      { id: 'svt',     name: 'SVT',            short: 'SVT',   bg: '#151515', fg: '#FFFFFF',
+        mark: { kind: 'serif',  text: 'SVT' } },
+      { id: 'tv4',     name: 'TV4',            short: 'TV4',   bg: '#E4002B', fg: '#FFFFFF',
+        mark: { kind: 'thin',   text: 'TV4' } },
+      { id: 'viaplay', name: 'Viaplay / V Sport', short: 'VIAPLAY', bg: '#0F0F12', fg: '#FFFFFF',
+        mark: { kind: 'italic', text: 'viaplay' },
+        defaultLogos: { forLight: 'assets/logos/viaplay-black.svg', forDark: 'assets/logos/viaplay-black.svg' } },
+      { id: 'max',     name: 'Max / Eurosport', short: 'MAX',  bg: '#002BE7', fg: '#FFFFFF',
+        mark: { kind: 'mono',   text: 'Max' } },
+      { id: 'atg',     name: 'ATG Live',       short: 'ATG',   bg: '#005AA0', fg: '#FFFFFF',
+        mark: { kind: 'mono',   text: 'ATG' } },
+    ],
+  };
+
+  const stationsIs = [
     { id: 'ruv',     name: 'RÚV',          short: 'RÚV',     bg: '#0B5FFF', fg: '#FFFFFF',
       mark: { kind: 'serif',  text: 'RÚV' },
       defaultLogos: { forLight: 'assets/logos/ruv-black.svg', forDark: 'assets/logos/ruv-black.svg' } },
@@ -58,6 +90,10 @@ window.IF_DATA = (function () {
       defaultLogos: { forLight: 'assets/logos/youtube.svg', forDark: 'assets/logos/youtube.svg' },
       logoScale: 1.1 },
   ];
+  stationsByCountry.is = stationsIs;
+
+  // The station list the app renders — for the active country.
+  const stations = stationsByCountry[country] || stationsIs;
 
   // i18n helpers (i18n.js loads before data.js). Fall back gracefully if absent.
   const I18N = window.IF_I18N;
@@ -428,8 +464,8 @@ window.IF_DATA = (function () {
   // Each country maps to a canonical IANA timezone. ALWAYS use IANA names with
   // Intl — never a fixed +N offset — so daylight-saving time is handled for us.
   // Iceland is UTC+0 all year (no DST).
-  const COUNTRY_TZ = { is: 'Atlantic/Reykjavik' };
-  const DEFAULT_TZ = 'Atlantic/Reykjavik';
+  const COUNTRY_TZ = { is: 'Atlantic/Reykjavik', se: 'Europe/Stockholm' };
+  const DEFAULT_TZ = COUNTRY_TZ[country] || 'Atlantic/Reykjavik';
 
   // The viewer's own timezone, detected from the browser.
   function localTimeZone() {
@@ -460,15 +496,15 @@ window.IF_DATA = (function () {
   // startIso: UTC ISO timestamp, status: 'live' | 'upcoming' | 'done'.
   // Works off absolute time, so it is independent of the display timezone.
   function countdown(startIso, status) {
-    if (status === 'live') return 'Í gangi';
+    if (status === 'live') return t('countdown.live');
     if (!startIso || typeof startIso !== 'string' || !startIso.includes('T')) return '';
     const start = new Date(startIso);
     if (isNaN(start.getTime())) return '';
     const diff = Math.round((start.getTime() - Date.now()) / 60000);
-    if (diff <= 0) return 'Í gangi';
-    if (diff < 60) return `í ${diff} mín`;
+    if (diff <= 0) return t('countdown.live');
+    if (diff < 60) return t('countdown.inMin', { n: diff });
     const hr = Math.round(diff / 60);
-    return `í ${hr} klst`;
+    return t('countdown.inHour', { n: hr });
   }
 
   // events starts empty — the app fetches from the backend API
@@ -479,8 +515,9 @@ window.IF_DATA = (function () {
   const SUPABASE_URL  = 'https://kbmjtondcqupdsumgyex.supabase.co';
   const SUPABASE_ANON = 'sb_publishable_Ash-Au72xRzfvPTuSS4jHw_vsugN-Qz';
 
-  return { sports, stations, dates, events, sportIcon, countdown, formatDateIs,
-           sportName, t,
+  return { sports, stations, stationsByCountry, dates, events, sportIcon,
+           countdown, formatDateIs, sportName, t,
+           country, countries, eventsUrl,
            COUNTRY_TZ, DEFAULT_TZ, localTimeZone, formatTime, tzCity,
            SUPABASE_URL, SUPABASE_ANON };
 })();

@@ -116,6 +116,22 @@ Allar stöðvar sækja dagskrá sjálfkrafa — engin innskráning þarf:
 
 > **Síminn Sport** notar sömu rás og Sýn Sport — sama efni sýnt á báðum, svo tvítekningar eru forðaðar.
 
+### Svíþjóð (sportzone.is/se)
+
+| Stöð | Gagnaveita |
+|------|-----------|
+| Viaplay / V Sport | `content.viaplay.se` (sama API og á Íslandi) |
+| SVT (SVT1/SVT2/SVT24) | `web-api.tv.nu` (opinber dagskrárveita) |
+| TV4-fjölskyldan (TV4, Sjuan, TV12, TV4 Fotboll/Hockey/Motor/Tennis, Sportkanalen, Sport Live 1–4) | `web-api.tv.nu` |
+| Max / Eurosport (Eurosport 1/2, Kanal 5/9) | `web-api.tv.nu` |
+| ATG Live | `web-api.tv.nu` |
+
+> **Amazon Prime** (hluti af Premier League) er ekki með opið dagskrár-API og er því ekki með — bætist við síðar ef veita finnst.
+>
+> **Athugið:** `vercel.json` stillir keyrslusvæðið á `arn1` (Stokkhólm) svo `content.viaplay.se` svari (getur verið lokað utan Norðurlanda). Ef Viaplay SE skilar engu eftir deploy má bæta `v-sport-*` rásunum við í `fetchers/tvnu.js` sem varaleið — sjá athugasemd efst í þeirri skrá.
+
+**Landval:** dropdown í haus vefsins. `/` = Ísland (íslenska), `/se` = Svíþjóð (sænska). Tungumál fylgir landi; `?lang=xx` yfirskrifar til prófunar. Nýtt land: bæta færslu í `COUNTRIES` í `public/i18n.js`, stöðvalista í `public/data.js`, fetchers í `COUNTRY_FETCHERS` í `api/events.js` og rewrite í `vercel.json`.
+
 ---
 
 ## 3. Uppfæra merkið og nafnið

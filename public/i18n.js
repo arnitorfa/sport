@@ -16,6 +16,27 @@ window.IF_I18N = (function () {
   const FALLBACK = 'is';
   const STORAGE_KEY = 'if_v2_lang';
 
+  // ── Country detection ──────────────────────────────────────────────────────
+  // The active country decides both the schedule (which broadcasters) and the
+  // default UI language. URL layout: sportzone.is/ = Iceland, /se = Sweden.
+  // ?country=xx also works (useful in dev, where /se isn't rewritten).
+  const COUNTRIES = {
+    is: { id: 'is', name: 'Ísland',  flag: '🇮🇸', path: '/',   lang: 'is' },
+    se: { id: 'se', name: 'Sverige', flag: '🇸🇪', path: '/se', lang: 'sv' },
+  };
+
+  function detectCountry() {
+    try {
+      const qp = new URLSearchParams(window.location.search).get('country');
+      if (qp && COUNTRIES[qp]) return qp;
+      const seg = (window.location.pathname.split('/')[1] || '').toLowerCase();
+      if (seg && COUNTRIES[seg]) return seg;
+    } catch (e) {}
+    return 'is';
+  }
+
+  const country = detectCountry();
+
   const dict = {
     // ── Icelandic (complete — the reference language) ───────────────────────
     is: {
@@ -99,6 +120,14 @@ window.IF_I18N = (function () {
       'nav.signIn': 'Skrá inn',
       'nav.signOut': 'Skrá út',
 
+      // Countdown (data.js)
+      'countdown.live': 'Í gangi',
+      'countdown.inMin': 'í {n} mín',
+      'countdown.inHour': 'í {n} klst',
+
+      // Country picker
+      'country.pick': 'Veldu land',
+
       // Timezone toggle
       'tz.country': 'Ísland',
       'tz.local': 'Minn tími',
@@ -149,10 +178,10 @@ window.IF_I18N = (function () {
       'ad.label': 'Auglýsing',
     },
 
-    // ── Swedish (DRÖG / DRAFT — sport names only, please review) ─────────────
-    // Demonstrates the layer: open the site with ?lang=sv to switch.
-    // UI chrome not listed here falls back to Icelandic automatically.
+    // ── Swedish (complete) ────────────────────────────────────────────────────
+    // Active by default on sportzone.is/se; also reachable via ?lang=sv.
     sv: {
+      // Sport categories
       'sport.all': 'Allt',
       'sport.fav': 'Favoriter',
       'sport.hm2026': 'VM 2026',
@@ -177,25 +206,136 @@ window.IF_I18N = (function () {
       'sport.athletics': 'Friidrott',
       'sport.tennis': 'Tennis',
       'sport.cycling': 'Cykling',
-      'sport.hesta': 'Ridsport',
+      'sport.hesta': 'Hästsport',
       'sport.other': 'Övrigt',
       'sport.rowing': 'Rugby',
+
+      // Dates
+      'date.today': 'Idag',
+      'date.tomorrow': 'Imorgon',
+      'date.yesterday': 'Igår',
+      'weekdayShort': ['Sön', 'Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör'],
+      'weekdayFull': ['Söndag', 'Måndag', 'Tisdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lördag'],
+      'monthFull': ['januari', 'februari', 'mars', 'april', 'maj', 'juni', 'juli', 'augusti', 'september', 'oktober', 'november', 'december'],
+
+      // Date strip
+      'datestrip.all': 'ALLA',
+      'datestrip.allLabel': 'DATUM',
+      'unit.events': 'sändn.',
+
+      // Sections
+      'section.live': 'Live just nu',
+      'section.upcomingToday': 'Senare idag',
+      'section.schedule': 'Tablå',
+      'section.done': 'Avslutat',
+      'section.doneLong': 'Avslutade sändningar',
+      'section.stations': 'Kanaler',
+
+      // Status / badges
+      'status.live': 'LIVE',
+      'follow.youFollow': 'Du följer',
+
+      // Session types (motorsport)
+      'session.practice': 'Träning',
+      'session.qualifying': 'Kval',
+      'session.race': 'Lopp',
+
+      // Countdown
+      'countdown.live': 'Pågår',
+      'countdown.inMin': 'om {n} min',
+      'countdown.inHour': 'om {n} tim',
+
+      // Country picker
+      'country.pick': 'Välj land',
+
+      // Loading / empty states
+      'loading.schedule': 'Hämtar tablån…',
+      'empty.filters': 'Inga sändningar hittades med dessa filter.',
+      'empty.day': 'Inga sportsändningar hittades den här dagen.',
+      'empty.search': 'Inga sändningar hittades för ”{q}”.',
+      'empty.mobile': 'Inga sändningar matchar ditt val.',
+      'empty.favs': 'Du har inga favoriter än. Klicka på stjärnan vid en sändning för att lägga till.',
+      'error.fetch': 'Kunde inte hämta tablån. Försök igen.',
+
+      // Search
+      'search.placeholder': 'Sök lag, sport, turnering…',
+      'search.clear': 'Rensa sökning',
+
+      // Header / nav
+      'nav.reload': 'Ladda om sidan',
+      'nav.themeToggle': 'Byt tema',
+      'nav.tzToggle': 'Byt tidszon',
+      'nav.kofi': 'Stöd SportZone på Ko-fi',
+      'nav.signIn': 'Logga in',
+      'nav.signOut': 'Logga ut',
+
+      // Timezone toggle
+      'tz.country': 'Sverige',
+      'tz.local': 'Min tid',
+      'tz.localShort': 'Min',
+      'tz.countryShort': 'Sve',
+      'tz.tipToLocal': 'Visar svensk sändningstid. Klicka för att visa tid i din tidszon ({city}).',
+      'tz.tipToCountry': 'Visar tid i din tidszon ({city}). Klicka för att visa svensk tid.',
+
+      // Sport picker
+      'picker.more': 'Fler',
+      'picker.close': 'Stäng',
+      'picker.pickDate': 'Välj datum',
+      'picker.pickSports': 'Välj sporter',
+      'picker.showAll': 'Visa allt',
+      'picker.show': 'Visa',
+      'unit.sportOne': 'sport',
+      'unit.sportMany': 'sporter',
+      'mobile.sportsAll': 'Sporter',
+      'mobile.sportOne': 'Sport',
+
+      // Favorites / star popover
+      'fav.team': 'Lag / utövare',
+      'fav.comp': 'Turnering',
+      'fav.series': 'Serie',
+      'fav.title': 'Favoriter',
+      'fav.autoNotePre': 'Allt du följer hamnar automatiskt i ',
+      'fav.autoNotePost': '.',
+      'login.sentToPre': 'Vi har skickat en länk till ',
+
+      // Login modal
+      'login.heading': 'Logga in',
+      'login.blurb': 'Vi skickar en länk till din e-post — inget lösenord behövs. Dina favoriter sparas och finns på alla enheter.',
+      'login.invalidEmail': 'Ange en giltig e-postadress.',
+      'login.sending': 'Skickar…',
+      'login.sendLink': 'Skicka länk',
+      'login.sentHeading': 'Länk skickad!',
+      'login.checkEmail': 'Kolla din e-post och klicka på länken för att logga in.',
+      'login.close': 'Stäng',
+
+      // Logo settings / misc
+      'logo.own': 'Egen',
+      'logo.forDark': 'För mörkt läge',
+      'logo.forLight': 'För ljust läge',
+      'logo.hintDark': 'Ljus logotyp (oftast vit)',
+      'logo.hintLight': 'Mörk logotyp (oftast svart)',
+      'logo.upload': 'Ladda upp',
+      'logo.replace': 'Byt',
+      'ad.label': 'Annons',
     },
   };
 
+  // Language follows the country: /se is Swedish, / is Icelandic.
+  // ?lang=xx still overrides for testing.
   function detect() {
     try {
       const url = new URLSearchParams(window.location.search).get('lang');
       if (url && dict[url]) return url;
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved && dict[saved]) return saved;
-      const nav = (navigator.language || '').slice(0, 2).toLowerCase();
-      if (nav && dict[nav]) return nav;
+      const cl = COUNTRIES[country] && COUNTRIES[country].lang;
+      if (cl && dict[cl]) return cl;
     } catch (e) {}
     return FALLBACK;
   }
 
   let lang = detect();
+
+  // Keep <html lang> in sync (SEO/accessibility).
+  try { document.documentElement.lang = lang; } catch (e) {}
 
   function getLang() { return lang; }
 
@@ -222,5 +362,6 @@ window.IF_I18N = (function () {
     return Array.isArray(v) ? v : [];
   }
 
-  return { dict, getLang, setLang, t, arr, langs: Object.keys(dict) };
+  return { dict, getLang, setLang, t, arr, langs: Object.keys(dict),
+           country, COUNTRIES };
 })();

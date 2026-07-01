@@ -1,17 +1,33 @@
-// Vercel serverless function — aggregates sports schedule from Icelandic broadcasters.
+// Vercel serverless function — aggregates sports schedule per country.
 //
 // API:
-//   GET /api/events?date=YYYY-MM-DD   — all sports events for a given date
-//   GET /api/events                   — events for today (Iceland time)
+//   GET /api/events?date=YYYY-MM-DD&country=is|se
+//   GET /api/events                   — events for today, Iceland (default)
 //
 // Uses native fetch (Node 18+, no node-fetch needed).
 // Edge caching via Cache-Control: s-maxage=300 (Vercel CDN caches for 5 minutes).
 
 import { fetchRuvSchedule }    from '../fetchers/ruv.js';
-import { fetchViaplaySchedule } from '../fetchers/viaplay.js';
+import { fetchViaplaySchedule, fetchViaplaySeSchedule } from '../fetchers/viaplay.js';
 import { fetchSynSchedule }    from '../fetchers/syn.js';
 import { fetchSiminnSchedule } from '../fetchers/siminn.js';
 import { fetchLiveySchedule }  from '../fetchers/livey.js';
+import { fetchTvnuSchedule }   from '../fetchers/tvnu.js';
+
+// ── Country → fetcher registry ─────────────────────────────────────────────
+const COUNTRY_FETCHERS = {
+  is: [
+    { name: 'RÚV',        fn: fetchRuvSchedule },
+    { name: 'Viaplay',    fn: fetchViaplaySchedule },
+    { name: 'Sýn',        fn: fetchSynSchedule },
+    { name: 'Síminn',     fn: fetchSiminnSchedule },
+    { name: 'Lívey',      fn: fetchLiveySchedule },
+  ],
+  se: [
+    { name: 'Viaplay SE', fn: fetchViaplaySeSchedule },
+    { name: 'tv.nu',      fn: fetchTvnuSchedule },
+  ],
+};
 
 // ── Event deduplication ─────────────────────────────────────────────────────
 function deduplicateEvents(events) {
@@ -34,28 +50,21 @@ function sortEvents(events) {
 }
 
 // ── Fetch all events for a date ─────────────────────────────────────────────
-async function fetchAllEvents(date) {
+async function fetchAllEvents(date, country) {
   // Use native fetch (available in Node 18+ on Vercel)
   const f = globalThis.fetch;
+  const fetchers = COUNTRY_FETCHERS[country] || COUNTRY_FETCHERS.is;
 
-  const results = await Promise.allSettled([
-    fetchRuvSchedule(date, f),
-    fetchViaplaySchedule(date, f),
-    fetchSynSchedule(date, f),
-    fetchSiminnSchedule(date, f),
-    fetchLiveySchedule(date, f),
-  ]);
+  const results = await Promise.allSettled(fetchers.map(({ fn }) => fn(date, f)));
 
   const allEvents = [];
-  const sources = ['RÚV', 'Viaplay', 'Sýn', 'Síminn', 'Lívey'];
-
   for (let i = 0; i < results.length; i++) {
     const result = results[i];
     if (result.status === 'fulfilled') {
-      console.log(`${sources[i]}: ${result.value.length} events`);
+      console.log(`${fetchers[i].name}: ${result.value.length} events`);
       allEvents.push(...result.value);
     } else {
-      console.error(`${sources[i]} failed:`, result.reason?.message);
+      console.error(`${fetchers[i].name} failed:`, result.reason?.message);
     }
   }
 
@@ -133,21 +142,26 @@ export default async function handler(req, res) {
       return;
     }
 
-    console.log(`Fetching events for ${dateStr}...`);
-    const date = new Date(dateStr + 'T00:00:00Z');
-    const events = await fetchAllEvents(date);
+    // Country: 'is' (default) or 'se'
+    const country = COUNTRY_FETCHERS[req.query.country] ? req.query.country : 'is';
 
-    // Bæta við Dr. Football YouTube þætti ef við á
-    const drFb = drFootballEvent(dateStr);
-    if (drFb) events.push(drFb);
+    console.log(`Fetching events for ${dateStr} (${country})...`);
+    const date = new Date(dateStr + 'T00:00:00Z');
+    const events = await fetchAllEvents(date, country);
+
+    // Bæta við Dr. Football YouTube þætti ef við á (aðeins Ísland)
+    if (country === 'is') {
+      const drFb = drFootballEvent(dateStr);
+      if (drFb) events.push(drFb);
+    }
     sortEvents(events);
 
-    console.log(`Total events for ${dateStr}: ${events.length}`);
+    console.log(`Total events for ${dateStr} (${country}): ${events.length}`);
 
     // Cache at the Vercel CDN edge for 5 minutes; serve stale while revalidating for 60s
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=60');
     res.setHeader('Content-Type', 'application/json');
-    res.status(200).json({ date: dateStr, events, cached: false });
+    res.status(200).json({ date: dateStr, country, events, cached: false });
   } catch (err) {
     console.error('Error fetching events:', err);
     res.status(500).json({ error: 'Failed to fetch schedule', message: err.message });

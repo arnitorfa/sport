@@ -1,10 +1,25 @@
-// Fetches sports schedule from Viaplay Iceland's public content API.
-// Endpoint: https://content.viaplay.is/pcdash-is/sport/all
+// Fetches sports schedule from Viaplay's public content API.
+// Same API shape in every Viaplay country — only the host/deviceKey differ:
+//   Iceland: https://content.viaplay.is/pcdash-is/sport/all
+//   Sweden:  https://content.viaplay.se/pcdash-se/sport/all
 // No authentication required for schedule metadata.
 // Note: actual streaming requires a Viaplay subscription.
 // Only returns live broadcasts (system.flags includes 'liveStream').
 
-const BASE_URL = 'https://content.viaplay.is/pcdash-is/sport/all';
+const VIAPLAY_COUNTRIES = {
+  is: {
+    baseUrl: 'https://content.viaplay.is/pcdash-is/sport/all',
+    sourceUrl: 'https://viaplay.is/is-is/',
+    timeZone: 'Atlantic/Reykjavik',
+    fallbackTitle: 'Íþróttaviðburður',
+  },
+  se: {
+    baseUrl: 'https://content.viaplay.se/pcdash-se/sport/all',
+    sourceUrl: 'https://viaplay.se/se-sv/',
+    timeZone: 'Europe/Stockholm',
+    fallbackTitle: 'Sportevenemang',
+  },
+};
 
 // Map Viaplay's publicPath prefixes to our sport IDs
 const VIAPLAY_SPORT_MAP = {
@@ -13,8 +28,36 @@ const VIAPLAY_SPORT_MAP = {
   'soccer':             'fb',
   'handbolti':          'hb',
   'handball':           'hb',
+  'handboll':           'hb',
   'körfubolti':         'kb',
   'basketball':         'kb',
+  'basket':             'kb',
+  // Swedish publicPath slugs (content.viaplay.se)
+  'fotboll':            'fb',
+  'ishockey':           'hockey',
+  'vintersport':        'ski',
+  'vintersporter':      'ski',
+  'langdakning':        'ski',
+  'alpint':             'ski',
+  'skidskytte':         'ski',
+  'friidrott':          'athletics',
+  'cykling':            'cycling',
+  'cykel':              'cycling',
+  'kampsport':          'mma',
+  'boxning':            'mma',
+  'travsport':          'hesta',
+  'trav':               'hesta',
+  'galopp':             'hesta',
+  'ridsport':           'hesta',
+  'baseboll':           'baseball',
+  'simning':            'swimming',
+  'volleyboll':         'volleyball',
+  'gymnastik':          'gym',
+  'schack':             'chess',
+  'pilkastning':        'darts',
+  // NB: lookup strips non-alphanumerics from path segments, so multi-word
+  // slugs must be listed in their stripped form.
+  'amerikanskfotboll':  'amfb',
   'motorsport':         'f1',
   'mtorsport':          'f1',   // Viaplay publicPath typo (missing "o") — confirmed in API
   'motogp':             'f1',
@@ -124,7 +167,7 @@ function buildSubjects(title, formatTitle, sport) {
   return subjects;
 }
 
-function normalizeProduct(product) {
+function normalizeProduct(product, cc) {
   const epg = product.epg || {};
   const content = product.content || {};
   const system = product.system || {};
@@ -154,8 +197,8 @@ function normalizeProduct(product) {
   if (start <= now && now < end) status = 'live';
   else if (end < now) status = 'done';
 
-  const timeStr = start.toLocaleTimeString('is-IS', { hour: '2-digit', minute: '2-digit', timeZone: 'Atlantic/Reykjavik' });
-  const endTimeStr = end.toLocaleTimeString('is-IS', { hour: '2-digit', minute: '2-digit', timeZone: 'Atlantic/Reykjavik' });
+  const timeStr = start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: cc.timeZone });
+  const endTimeStr = end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: cc.timeZone });
 
   const publicPath = product.publicPath || '';
   const pathParts = publicPath.split('/');
@@ -165,7 +208,7 @@ function normalizeProduct(product) {
       .replace(/-/g, ' ')
       .replace(/\b\w/g, c => c.toUpperCase());
   }
-  if (!title) title = content.seriesTitle || 'Íþróttaviðburður';
+  if (!title) title = content.seriesTitle || cc.fallbackTitle;
 
   // Resolve series/format title BEFORE sport detection — it's a key signal
   // when content.title is a generic session label ("Race", "Qualifying").
@@ -195,13 +238,15 @@ function normalizeProduct(product) {
     status,
     subjects: buildSubjects(title, formatTitle, sport),
     image: imageUrl,
-    sourceUrl: 'https://viaplay.is/is-is/',
+    sourceUrl: cc.sourceUrl,
   };
 }
 
-export async function fetchViaplaySchedule(date, fetch) {
+async function fetchViaplayCountry(country, date, fetch) {
+  const cc = VIAPLAY_COUNTRIES[country];
+  if (!cc) return [];
   const dateStr = date.toISOString().slice(0, 10);
-  const url = `${BASE_URL}?date=${dateStr}`;
+  const url = `${cc.baseUrl}?date=${dateStr}`;
 
   try {
     const resp = await fetch(url, {
@@ -222,7 +267,7 @@ export async function fetchViaplaySchedule(date, fetch) {
       const products = block?._embedded?.['viaplay:products'] || [];
       console.log(`Viaplay block "${block.title}": ${products.length} products`);
       for (const product of products) {
-        const normalized = normalizeProduct(product);
+        const normalized = normalizeProduct(product, cc);
         if (normalized) allEvents.push(normalized);
       }
     }
@@ -233,14 +278,24 @@ export async function fetchViaplaySchedule(date, fetch) {
     const dateFiltered = allEvents.filter(ev => {
       if (!ev.startIso) return true;
       const evDate = new Date(ev.startIso)
-        .toLocaleDateString('sv-SE', { timeZone: 'Atlantic/Reykjavik' });
+        .toLocaleDateString('sv-SE', { timeZone: cc.timeZone });
       return evDate === dateStr;
     });
 
-    console.log(`Viaplay live sports events: ${dateFiltered.length} (filtered from ${allEvents.length})`);
+    console.log(`Viaplay(${country}) live sports events: ${dateFiltered.length} (filtered from ${allEvents.length})`);
     return dateFiltered;
   } catch (err) {
-    console.error('Viaplay fetch error:', err.message);
+    console.error(`Viaplay(${country}) fetch error:`, err.message);
     return [];
   }
+}
+
+// Iceland (backwards-compatible export)
+export async function fetchViaplaySchedule(date, fetch) {
+  return fetchViaplayCountry('is', date, fetch);
+}
+
+// Sweden
+export async function fetchViaplaySeSchedule(date, fetch) {
+  return fetchViaplayCountry('se', date, fetch);
 }

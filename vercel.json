@@ -1,4 +1,6 @@
 {
+  "regions": ["arn1"],
+  "trailingSlash": false,
   "functions": {
     "api/events.js": {
       "maxDuration": 30
@@ -6,6 +8,7 @@
   },
   "rewrites": [
     { "source": "/api/events", "destination": "/api/events" },
-    { "source": "/worldcup", "destination": "/worldcup.html" }
+    { "source": "/worldcup", "destination": "/worldcup.html" },
+    { "source": "/se", "destination": "/index.html" }
   ]
 }

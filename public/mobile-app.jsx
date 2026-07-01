@@ -17,7 +17,7 @@ function MobileApp({ dark, onThemeChange }) {
   const [tzMode, setTzModeRaw] = React.useState(() => readLS(LS.tz, 'country'));
   const setTzMode = (m) => { setTzModeRaw(m); writeLS(LS.tz, m); };
   const localTz = React.useMemo(() => D.localTimeZone(), []);
-  const activeTz = tzMode === 'local' ? localTz : D.COUNTRY_TZ.is;
+  const activeTz = tzMode === 'local' ? localTz : (D.COUNTRY_TZ[D.country] || D.COUNTRY_TZ.is);
   const [selectedSports, setSelectedSportsRaw] = React.useState(() => new Set());
   const setSelectedSports = (n) => setSelectedSportsRaw(new Set(n));
   const [stations, setStations] = React.useState(D.stations.map((s) => s.id));
@@ -31,6 +31,7 @@ function MobileApp({ dark, onThemeChange }) {
   const [starSheetFor, setStarSheetFor] = React.useState(null);
   const [searchOpen, setSearchOpen] = React.useState(false);
   const [search, setSearch] = React.useState('');
+  const [countryMenu, setCountryMenu] = React.useState(false);
 
   // ── API fetch ───────────────────────────────────────────────────────────────
   const [events, setEvents] = React.useState([]);
@@ -44,11 +45,11 @@ function MobileApp({ dark, onThemeChange }) {
 
     const doFetch = (showLoader) => {
       if (showLoader) { setLoadingEvents(true); setEvents([]); }
-      const fetches = [fetch(`/api/events?date=${d.isoDate}`).then((r) => r.json())];
+      const fetches = [fetch(D.eventsUrl(d.isoDate)).then((r) => r.json())];
       // When showing today, also fetch yesterday to catch midnight-spanning live events
       if (date === 0) {
         const yest = D.dates.find((x) => x.offset === -1);
-        if (yest) fetches.push(fetch(`/api/events?date=${yest.isoDate}`).then((r) => r.json()).catch(() => ({ events: [] })));
+        if (yest) fetches.push(fetch(D.eventsUrl(yest.isoDate)).then((r) => r.json()).catch(() => ({ events: [] })));
       }
       return Promise.all(fetches)
         .then(([todayData, yestData]) => {
@@ -259,6 +260,43 @@ function MobileApp({ dark, onThemeChange }) {
         />
         {/* button row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
+        {/* Country picker */}
+        <div style={{ position: 'relative' }}>
+          <button
+            onClick={() => setCountryMenu((m) => !m)}
+            aria-label={t('country.pick')}
+            aria-expanded={countryMenu}
+            style={{ ...mIconBtn(pal), width: 'auto', padding: '0 9px', gap: 5,
+                     fontSize: 12, fontWeight: 700, letterSpacing: '-0.01em' }}>
+            <span style={{ fontSize: 14, lineHeight: 1 }}>{(D.countries[D.country] || {}).flag}</span>
+            {D.country.toUpperCase()}
+          </button>
+          {countryMenu &&
+            <div style={{
+              position: 'absolute', top: 40, left: 0, minWidth: 150,
+              background: pal.card, border: `1px solid ${pal.hair}`,
+              borderRadius: 12, padding: 6, zIndex: 60,
+              boxShadow: '0 12px 40px rgba(0,0,0,0.25)'
+            }}>
+              {Object.values(D.countries).map((c) => (
+                <button key={c.id}
+                  onClick={() => {
+                    setCountryMenu(false);
+                    if (c.id !== D.country) window.location.href = c.path;
+                  }}
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'center', gap: 9,
+                    padding: '10px 10px', borderRadius: 8, border: 'none',
+                    background: c.id === D.country ? pal.accentSoft : 'transparent',
+                    color: pal.fg, fontSize: 13, fontWeight: c.id === D.country ? 700 : 500,
+                    cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left'
+                  }}>
+                  <span style={{ fontSize: 15, lineHeight: 1 }}>{c.flag}</span>
+                  <span>{c.name}</span>
+                </button>
+              ))}
+            </div>}
+        </div>
         <a href="https://ko-fi.com/torfason" target="_blank" rel="noopener noreferrer"
            title={t('nav.kofi')}
            style={{ ...mIconBtn(pal), textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
