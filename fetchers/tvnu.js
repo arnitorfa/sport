@@ -27,6 +27,48 @@ const HEADERS = {
   'Origin': 'https://www.tv.nu',
 };
 
+// ── Rate limiting ────────────────────────────────────────────────────────────
+// tv.nu returns HTTP 429 when hammered with 30+ parallel requests. A module-
+// level semaphore caps TOTAL concurrency across all fetchers in this module
+// (linear + v-sport fallback run in parallel), and 429/5xx responses are
+// retried with backoff.
+const MAX_CONCURRENT = 4;
+let _active = 0;
+const _waiters = [];
+
+async function withSlot(fn) {
+  if (_active >= MAX_CONCURRENT) {
+    await new Promise((resolve) => _waiters.push(resolve));
+  }
+  _active++;
+  try { return await fn(); }
+  finally {
+    _active--;
+    const next = _waiters.shift();
+    if (next) next();
+  }
+}
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function fetchJsonWithRetry(url, fetch, attempts = 3) {
+  let lastErr;
+  for (let i = 0; i < attempts; i++) {
+    if (i > 0) await sleep(400 * i + Math.random() * 300); // backoff + jitter
+    try {
+      const resp = await fetch(url, { headers: HEADERS });
+      if (resp.ok) return resp.json();
+      lastErr = new Error(`HTTP ${resp.status}`);
+      // Retry only on rate limiting / server errors
+      if (resp.status !== 429 && resp.status < 500) throw lastErr;
+    } catch (err) {
+      lastErr = err;
+      if (!/HTTP (429|5\d\d)/.test(err.message)) throw err;
+    }
+  }
+  throw lastErr;
+}
+
 // slug → { name: display channel name, station: station group id in data.js,
 //          allSport: every broadcast is sport (dedicated sports channel) }
 const CHANNELS = {
@@ -80,19 +122,22 @@ const V_SPORT_CHANNELS = {
 const GENRE_MAP = {
   'fotboll':            'fb',
   'ishockey':           'hockey',
+  'hockey':             'hockey',
   'handboll':           'hb',
   'basket':             'kb',
   'motorsport':         'f1',
+  'motor':              'f1',
   'golf':               'golf',
   'tennis':             'tennis',
   'vintersport':        'ski',
+  'skidor':             'ski',
   'friidrott':          'athletics',
   'cykling':            'cycling',
   'kampsport':          'mma',
   'trav':               'hesta',
   'galopp':             'hesta',
   'ridsport':           'hesta',
-  'hastsport':          'hesta',
+  'hästsport':          'hesta',
   'amerikansk fotboll': 'amfb',
   'baseboll':           'baseball',
   'snooker':            'snooker',
@@ -119,7 +164,7 @@ const KEYWORDS = [
   [/friidrott|maraton|diamond league/i, 'athletics'],
   [/cykel|cykling|tour de france|giro d|vuelta/i, 'cycling'],
   [/ufc|mma|boxning|kampsport/i, 'mma'],
-  [/trav|galopp|v75|v86|ridsport|hoppning|dressyr/i, 'hesta'],
+  [/trav|galopp|v75|v86|v64|ridsport|hoppning|dressyr|stjärnkusken|kusk/i, 'hesta'],
   [/amerikansk fotboll|\bnfl\b/i, 'amfb'],
   [/baseboll|\bmlb\b/i, 'baseball'],
   [/snooker/i, 'snooker'],
@@ -167,16 +212,65 @@ function slugify(s) {
     .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
-function buildSubjects(title) {
-  const subjects = [];
-  // "Lag A - Lag B" / "Lag A – Lag B"
-  const vsMatch = (title || '').match(/^(.+?)\s*[-–—]\s*(.+)$/);
-  if (vsMatch) {
-    for (const teamName of [vsMatch[1].trim(), vsMatch[2].trim()]) {
-      if (!teamName || teamName.length > 40) continue;
-      const slug = slugify(teamName);
-      if (slug) subjects.push({ key: `t:${slug}`, label: teamName, type: 'team' });
+// Non-events that shouldn't appear in the schedule (broadcast pauses etc.)
+const SKIP_TITLES = /sändningsuppehåll|programuppehåll|end of programmes|testbild/i;
+
+// Clean up tv.nu titles: "Grand Slam Wimbledon, | | 2026-07-01" →
+// "Grand Slam Wimbledon". Strips pipe runs, trailing ISO dates and dangling
+// punctuation.
+function cleanTitle(raw) {
+  return (raw || '')
+    .replace(/\s*\|+\s*/g, ' ')                    // pipe separators → space
+    .replace(/[,\s]*\d{4}-\d{2}-\d{2}\s*$/, '')    // trailing ISO date
+    .replace(/\s{2,}/g, ' ')
+    .replace(/^[\s,·:–-]+|[\s,·:–-]+$/g, '')
+    .trim();
+}
+
+// A plausible team/participant name: short, not just a number/date fragment.
+function looksLikeTeam(s) {
+  if (!s || s.length < 2 || s.length > 32) return false;
+  if (/^[\d\s:.\/-]+$/.test(s)) return false;       // pure numbers/dates
+  return true;
+}
+
+// tv.nu uses BOTH "Lag A - Lag B" and "Lag A: Lag B" (often with a
+// competition prefix: "Superettan, Sundsvall: Öster"). Returns
+// { teams: [a, b] | null, comp: 'Superettan' | null, displayTitle }.
+function parseMatchup(title) {
+  // Colon form — "left: right" (single colon)
+  const colon = title.match(/^([^:]+):\s*([^:]+)$/);
+  if (colon) {
+    let left = colon[1].trim();
+    const right = colon[2].trim();
+    let comp = null;
+    // Competition prefix before the last comma: "Superettan, Sundsvall"
+    const lastComma = left.lastIndexOf(',');
+    if (lastComma > 0) {
+      comp = left.slice(0, lastComma).trim();
+      left = left.slice(lastComma + 1).trim();
     }
+    if (looksLikeTeam(left) && looksLikeTeam(right)) {
+      return { teams: [left, right], comp, displayTitle: `${left} - ${right}` };
+    }
+  }
+  // Dash form — require spaces around the dash so "2026-07-01" never splits
+  const dash = title.match(/^(.+?)\s+[-–—]\s+(.+)$/);
+  if (dash) {
+    const a = dash[1].trim(), b = dash[2].trim();
+    if (looksLikeTeam(a) && looksLikeTeam(b)) {
+      return { teams: [a, b], comp: null, displayTitle: title };
+    }
+  }
+  return { teams: null, comp: null, displayTitle: title };
+}
+
+function buildSubjects(teams) {
+  if (!teams) return [];
+  const subjects = [];
+  for (const teamName of teams) {
+    const slug = slugify(teamName);
+    if (slug) subjects.push({ key: `t:${slug}`, label: teamName, type: 'team' });
   }
   return subjects;
 }
@@ -199,12 +293,18 @@ function normalizeBroadcast(item, slug, channel, dateStr) {
   if (start <= now && now < end) status = 'live';
   else if (end < now) status = 'done';
 
-  const title = item.title || 'Sportevenemang';
+  const rawTitle = cleanTitle(item.title) || 'Sportevenemang';
+  if (SKIP_TITLES.test(rawTitle)) return null;
   const description = item.description || '';
-  const sport = detectSport(title, description, item.genres, channel);
-  // Prefer a specific genre ("Fotboll") over the generic "Sport" umbrella.
+  const sport = detectSport(rawTitle, description, item.genres, channel);
+  const { teams, comp: titleComp, displayTitle } = parseMatchup(rawTitle);
+
+  // comp priority: prefix from the title ("Superettan") → a genre that maps to
+  // a sport ("Fotboll") → first non-generic genre → ''.
   const genreNames = (item.genres || []).map(g => g.name).filter(Boolean);
+  const mappedGenre = genreNames.find(g => GENRE_MAP[g.toLowerCase()]);
   const specificGenre = genreNames.find(g => g.toLowerCase() !== 'sport');
+  const comp = titleComp || mappedGenre || specificGenre || '';
 
   return {
     id: `tvnu-${slug}-${item.id || start.toISOString()}`,
@@ -215,11 +315,11 @@ function normalizeBroadcast(item, slug, channel, dateStr) {
     sport,
     station: channel.station,
     channelName: channel.name,
-    title,
+    title: displayTitle,
     sub: description ? description.slice(0, 140) : '',
-    comp: specificGenre || genreNames[0] || '',
+    comp,
     status,
-    subjects: buildSubjects(title),
+    subjects: buildSubjects(teams),
     image: null,
     sourceUrl: `https://www.tv.nu/kanal/${slug}`,
   };
@@ -231,9 +331,7 @@ async function fetchChannels(channels, date, fetch, label) {
   const results = await Promise.allSettled(
     Object.entries(channels).map(async ([slug, channel]) => {
       const url = `${BASE_URL}/${slug}/schedule?date=${dateStr}&fullDay=true`;
-      const resp = await fetch(url, { headers: HEADERS });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const data = await resp.json();
+      const data = await withSlot(() => fetchJsonWithRetry(url, fetch));
       const broadcasts = data?.data?.broadcasts || [];
       const events = [];
       for (const item of broadcasts) {
