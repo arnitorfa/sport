@@ -13,7 +13,10 @@
 // half-translated language never shows blanks.
 
 window.IF_I18N = (function () {
-  const FALLBACK = 'is';
+  // English is the reference language — every key exists in `en`, and any
+  // missing key in another language falls back to English. New countries get
+  // an English UI automatically until their translation is complete.
+  const FALLBACK = 'en';
   const STORAGE_KEY = 'if_v2_lang';
 
   // ── Country detection ──────────────────────────────────────────────────────
@@ -38,7 +41,154 @@ window.IF_I18N = (function () {
   const country = detectCountry();
 
   const dict = {
-    // ── Icelandic (complete — the reference language) ───────────────────────
+    // ── English (complete — the reference language and global fallback) ─────
+    en: {
+      // Sport categories
+      'sport.all': 'All',
+      'sport.fav': 'Favourites',
+      'sport.hm2026': 'WC 2026',
+      'sport.fb': 'Football',
+      'sport.hb': 'Handball',
+      'sport.kb': 'Basketball',
+      'sport.f1': 'Motorsport',
+      'sport.golf': 'Golf',
+      'sport.mma': 'Combat sports',
+      'sport.amfb': 'NFL',
+      'sport.hockey': 'Ice hockey',
+      'sport.ski': 'Winter sports',
+      'sport.snooker': 'Snooker',
+      'sport.baseball': 'Baseball',
+      'sport.darts': 'Darts',
+      'sport.pool': 'Pool',
+      'sport.gym': 'Gymnastics',
+      'sport.chess': 'Chess',
+      'sport.padel': 'Padel',
+      'sport.volleyball': 'Volleyball',
+      'sport.swimming': 'Swimming',
+      'sport.athletics': 'Athletics',
+      'sport.tennis': 'Tennis',
+      'sport.cycling': 'Cycling',
+      'sport.hesta': 'Equestrian',
+      'sport.other': 'Other',
+      'sport.rowing': 'Rugby',
+
+      // Dates
+      'date.today': 'Today',
+      'date.tomorrow': 'Tomorrow',
+      'date.yesterday': 'Yesterday',
+      'weekdayShort': ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+      'weekdayFull': ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+      'monthFull': ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+
+      // Date strip
+      'datestrip.all': 'ALL',
+      'datestrip.allLabel': 'DATES',
+      'unit.events': 'events',
+
+      // Sections
+      'section.live': 'Live now',
+      'section.upcomingToday': 'Later today',
+      'section.schedule': 'Schedule',
+      'section.done': 'Finished',
+      'section.doneLong': 'Finished events',
+      'section.stations': 'Channels',
+
+      // Status / badges
+      'status.live': 'LIVE',
+      'follow.youFollow': 'You follow',
+
+      // Session types (motorsport)
+      'session.practice': 'Practice',
+      'session.qualifying': 'Qualifying',
+      'session.race': 'Race',
+
+      // Countdown
+      'countdown.live': 'Live now',
+      'countdown.inMin': 'in {n} min',
+      'countdown.inHour': 'in {n} h',
+
+      // Country picker
+      'country.pick': 'Choose country',
+
+      // World Cup button (Iceland only)
+      'wc.button': 'World Cup schedule here!',
+
+      // Stats footer
+      'stats.shown': '{n} events shown',
+
+      // Loading / empty states
+      'loading.schedule': 'Loading schedule…',
+      'empty.filters': 'No events found with these filters.',
+      'empty.day': 'No sports events found on this day.',
+      'empty.search': 'No events found for "{q}".',
+      'empty.mobile': 'No events match your selection.',
+      'empty.favs': 'No favourites yet. Tap the star on an event to add one.',
+      'error.fetch': 'Could not load the schedule. Please try again.',
+
+      // Search
+      'search.placeholder': 'Search team, sport, competition…',
+      'search.clear': 'Clear search',
+
+      // Header / nav
+      'nav.reload': 'Reload the page',
+      'nav.themeToggle': 'Toggle theme',
+      'nav.tzToggle': 'Toggle timezone',
+      'nav.kofi': 'Support SportZone on Ko-fi',
+      'nav.signIn': 'Sign in',
+      'nav.signOut': 'Sign out',
+
+      // Timezone toggle
+      'tz.country': 'Local time',
+      'tz.local': 'My time',
+      'tz.localShort': 'Mine',
+      'tz.countryShort': 'Loc',
+      'tz.tipToLocal': 'Showing broadcast time. Click to show times in your timezone ({city}).',
+      'tz.tipToCountry': 'Showing times in your timezone ({city}). Click to show broadcast time.',
+
+      // Sport picker
+      'picker.more': 'More',
+      'picker.close': 'Close',
+      'picker.pickDate': 'Choose a date',
+      'picker.pickSports': 'Choose sports',
+      'picker.showAll': 'Show all',
+      'picker.show': 'Show',
+      'unit.sportOne': 'sport',
+      'unit.sportMany': 'sports',
+      'mobile.sportsAll': 'Sports',
+      'mobile.sportOne': 'Sport',
+
+      // Favorites / star popover
+      'fav.team': 'Team / individual',
+      'fav.comp': 'Competition',
+      'fav.series': 'Series',
+      'fav.title': 'Favourites',
+      'fav.autoNotePre': 'Everything you follow appears automatically in ',
+      'fav.autoNotePost': '.',
+      'login.sentToPre': 'We sent a link to ',
+
+      // Login modal
+      'login.heading': 'Sign in',
+      'login.blurb': 'We send a link to your email — no password needed. Your favourites are saved and available on all devices.',
+      'login.invalidEmail': 'Enter a valid email address.',
+      'login.sending': 'Sending…',
+      'login.sendLink': 'Send link',
+      'login.sentHeading': 'Link sent!',
+      'login.checkEmail': 'Check your email and click the link to sign in.',
+      'login.close': 'Close',
+
+      // Logo settings / misc
+      'logo.own': 'Custom',
+      'logo.forDark': 'For dark mode',
+      'logo.forLight': 'For light mode',
+      'logo.hintDark': 'Light logo (usually white)',
+      'logo.hintLight': 'Dark logo (usually black)',
+      'logo.upload': 'Upload',
+      'logo.noImage': 'No image',
+      'logo.replace': 'Replace',
+      'ad.label': 'Advertisement',
+    },
+
+    // ── Icelandic (complete) ─────────────────────────────────────────────────
     is: {
       // Sport categories (keyed by sport id from data.js)
       'sport.all': 'Allt',
@@ -128,6 +278,12 @@ window.IF_I18N = (function () {
       // Country picker
       'country.pick': 'Veldu land',
 
+      // World Cup button (Iceland only)
+      'wc.button': 'HM karla 2026 · Dagskráin hér!',
+
+      // Stats footer
+      'stats.shown': '{n} viðburðir sýndir',
+
       // Timezone toggle
       'tz.country': 'Ísland',
       'tz.local': 'Minn tími',
@@ -174,6 +330,7 @@ window.IF_I18N = (function () {
       'logo.hintDark': 'Ljóst merki (oftast hvítt)',
       'logo.hintLight': 'Dökkt merki (oftast svart)',
       'logo.upload': 'Hlaða inn',
+      'logo.noImage': 'Engin mynd',
       'logo.replace': 'Skipta',
       'ad.label': 'Auglýsing',
     },
@@ -248,6 +405,12 @@ window.IF_I18N = (function () {
       // Country picker
       'country.pick': 'Välj land',
 
+      // World Cup button (Iceland only)
+      'wc.button': 'VM-tablån här!',
+
+      // Stats footer
+      'stats.shown': '{n} sändningar visas',
+
       // Loading / empty states
       'loading.schedule': 'Hämtar tablån…',
       'empty.filters': 'Inga sändningar hittades med dessa filter.',
@@ -315,6 +478,7 @@ window.IF_I18N = (function () {
       'logo.hintDark': 'Ljus logotyp (oftast vit)',
       'logo.hintLight': 'Mörk logotyp (oftast svart)',
       'logo.upload': 'Ladda upp',
+      'logo.noImage': 'Ingen bild',
       'logo.replace': 'Byt',
       'ad.label': 'Annons',
     },

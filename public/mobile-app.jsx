@@ -9,6 +9,11 @@ function MobileApp({ dark, onThemeChange }) {
   const D = window.IF_DATA;
   const t = D.t;
   const isDark = dark;
+  // Defensive defaults — protect against a stale cached data.js that predates
+  // the country layer (would otherwise crash the whole app).
+  const activeCountry = D.country || 'is';
+  const countryList = D.countries || { is: { id: 'is', name: 'Ísland', flag: '🇮🇸', path: '/' } };
+  const eventsUrl = D.eventsUrl || ((iso) => `/api/events?date=${iso}`);
 
   // ── state ──────────────────────────────────────────────────────────────────
   const [date, setDate] = React.useState(0); // offset: -1=yesterday, 0=today, 1=tomorrow …
@@ -17,7 +22,7 @@ function MobileApp({ dark, onThemeChange }) {
   const [tzMode, setTzModeRaw] = React.useState(() => readLS(LS.tz, 'country'));
   const setTzMode = (m) => { setTzModeRaw(m); writeLS(LS.tz, m); };
   const localTz = React.useMemo(() => D.localTimeZone(), []);
-  const activeTz = tzMode === 'local' ? localTz : (D.COUNTRY_TZ[D.country] || D.COUNTRY_TZ.is);
+  const activeTz = tzMode === 'local' ? localTz : (D.COUNTRY_TZ[activeCountry] || D.COUNTRY_TZ.is);
   const [selectedSports, setSelectedSportsRaw] = React.useState(() => new Set());
   const setSelectedSports = (n) => setSelectedSportsRaw(new Set(n));
   const [stations, setStations] = React.useState(D.stations.map((s) => s.id));
@@ -45,11 +50,11 @@ function MobileApp({ dark, onThemeChange }) {
 
     const doFetch = (showLoader) => {
       if (showLoader) { setLoadingEvents(true); setEvents([]); }
-      const fetches = [fetch(D.eventsUrl(d.isoDate)).then((r) => r.json())];
+      const fetches = [fetch(eventsUrl(d.isoDate)).then((r) => r.json())];
       // When showing today, also fetch yesterday to catch midnight-spanning live events
       if (date === 0) {
         const yest = D.dates.find((x) => x.offset === -1);
-        if (yest) fetches.push(fetch(D.eventsUrl(yest.isoDate)).then((r) => r.json()).catch(() => ({ events: [] })));
+        if (yest) fetches.push(fetch(eventsUrl(yest.isoDate)).then((r) => r.json()).catch(() => ({ events: [] })));
       }
       return Promise.all(fetches)
         .then(([todayData, yestData]) => {
@@ -268,8 +273,8 @@ function MobileApp({ dark, onThemeChange }) {
             aria-expanded={countryMenu}
             style={{ ...mIconBtn(pal), width: 'auto', padding: '0 9px', gap: 5,
                      fontSize: 12, fontWeight: 700, letterSpacing: '-0.01em' }}>
-            <span style={{ fontSize: 14, lineHeight: 1 }}>{(D.countries[D.country] || {}).flag}</span>
-            {D.country.toUpperCase()}
+            <span style={{ fontSize: 14, lineHeight: 1 }}>{(countryList[activeCountry] || {}).flag}</span>
+            {activeCountry.toUpperCase()}
           </button>
           {countryMenu &&
             <div style={{
@@ -278,17 +283,17 @@ function MobileApp({ dark, onThemeChange }) {
               borderRadius: 12, padding: 6, zIndex: 60,
               boxShadow: '0 12px 40px rgba(0,0,0,0.25)'
             }}>
-              {Object.values(D.countries).map((c) => (
+              {Object.values(countryList).map((c) => (
                 <button key={c.id}
                   onClick={() => {
                     setCountryMenu(false);
-                    if (c.id !== D.country) window.location.href = c.path;
+                    if (c.id !== activeCountry) window.location.href = c.path;
                   }}
                   style={{
                     width: '100%', display: 'flex', alignItems: 'center', gap: 9,
                     padding: '10px 10px', borderRadius: 8, border: 'none',
-                    background: c.id === D.country ? pal.accentSoft : 'transparent',
-                    color: pal.fg, fontSize: 13, fontWeight: c.id === D.country ? 700 : 500,
+                    background: c.id === activeCountry ? pal.accentSoft : 'transparent',
+                    color: pal.fg, fontSize: 13, fontWeight: c.id === activeCountry ? 700 : 500,
                     cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left'
                   }}>
                   <span style={{ fontSize: 15, lineHeight: 1 }}>{c.flag}</span>
@@ -509,8 +514,8 @@ function MobileApp({ dark, onThemeChange }) {
         </div>
       </div>
 
-      {/* ── HM TAKKI ── */}
-      {new Date() <= new Date('2026-07-19T23:00:00Z') && (
+      {/* ── HM TAKKI (aðeins Ísland — worldcup.sportzone.is er íslenskur vefur) ── */}
+      {activeCountry === 'is' && new Date() <= new Date('2026-07-19T23:00:00Z') && (
         <div style={{ padding: '10px 14px 2px' }}>
           <a href="https://worldcup.sportzone.is" style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -521,7 +526,7 @@ function MobileApp({ dark, onThemeChange }) {
             color: isDark ? '#C8FF3D' : '#F26419',
             textDecoration: 'none', fontFamily: 'inherit',
           }}>
-            HM Dagskráin hér!
+            {t('wc.button')}
           </a>
         </div>
       )}

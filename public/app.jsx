@@ -35,6 +35,11 @@ const SESSION_KEY = { 'Æfing': 'session.practice', 'Tímataka': 'session.qualif
 function App() {
   const D = window.IF_DATA;
   const t = D.t;
+  // Defensive defaults — protect against a stale cached data.js that predates
+  // the country layer (would otherwise crash the whole app).
+  const activeCountry = D.country || 'is';
+  const countryList = D.countries || { is: { id: 'is', name: 'Ísland', flag: '🇮🇸', path: '/' } };
+  const eventsUrl = D.eventsUrl || ((iso) => `/api/events?date=${iso}`);
 
   // ── state ──
   const [theme, setTheme] = React.useState(() => readLS(LS.theme, 'dark'));
@@ -43,7 +48,7 @@ function App() {
   const [tzMode, setTzModeRaw] = React.useState(() => readLS(LS.tz, 'country'));
   const setTzMode = (m) => { setTzModeRaw(m); writeLS(LS.tz, m); };
   const localTz = React.useMemo(() => D.localTimeZone(), []);
-  const countryTz = D.COUNTRY_TZ[D.country] || D.COUNTRY_TZ.is;
+  const countryTz = D.COUNTRY_TZ[activeCountry] || D.COUNTRY_TZ.is;
   const activeTz = tzMode === 'local' ? localTz : countryTz;
   // Format an event's UTC start/end into the active timezone (fallback to the
   // server-formatted string if startIso is somehow missing).
@@ -104,7 +109,7 @@ function App() {
     if (!dateObj) return;
     setLoading(true);
     setFetchError(null);
-    fetch(D.eventsUrl(dateObj.isoDate))
+    fetch(eventsUrl(dateObj.isoDate))
       .then((r) => r.json())
       .then((data) => {
         const evs = data.events || [];
@@ -133,8 +138,8 @@ function App() {
     const yesterdayObj = D.dates.find((d) => d.offset === -1);
     if (!todayObj) return;
     const fetchToday = () => {
-      const fetches = [fetch(D.eventsUrl(todayObj.isoDate)).then((r) => r.json())];
-      if (yesterdayObj) fetches.push(fetch(D.eventsUrl(yesterdayObj.isoDate)).then((r) => r.json()).catch(() => ({ events: [] })));
+      const fetches = [fetch(eventsUrl(todayObj.isoDate)).then((r) => r.json())];
+      if (yesterdayObj) fetches.push(fetch(eventsUrl(yesterdayObj.isoDate)).then((r) => r.json()).catch(() => ({ events: [] })));
       Promise.all(fetches)
         .then(([todayData, yestData]) => {
           const todayEvs = todayData.events || [];
@@ -162,7 +167,7 @@ function App() {
   React.useEffect(() => {
     D.dates.forEach((d) => {
       if (dayCounts[d.isoDate] !== undefined) return; // already fetched
-      fetch(D.eventsUrl(d.isoDate))
+      fetch(eventsUrl(d.isoDate))
         .then((r) => r.json())
         .then((data) => {
           const evs = data.events || [];
@@ -888,8 +893,8 @@ function App() {
             title={t('country.pick')}
             aria-label={t('country.pick')}
             aria-expanded={countryMenu}>
-            <span style={{ fontSize: 15, lineHeight: 1 }}>{(D.countries[D.country] || {}).flag}</span>
-            <span>{D.country.toUpperCase()}</span>
+            <span style={{ fontSize: 15, lineHeight: 1 }}>{(countryList[activeCountry] || {}).flag}</span>
+            <span>{activeCountry.toUpperCase()}</span>
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                  strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
                  style={{ transform: countryMenu ? 'rotate(180deg)' : 'none' }}>
@@ -904,22 +909,22 @@ function App() {
               boxShadow: '0 12px 40px rgba(0,0,0,0.18)'
             }}
             onMouseLeave={() => setCountryMenu(false)}>
-              {Object.values(D.countries).map((c) => (
+              {Object.values(countryList).map((c) => (
                 <button key={c.id}
                   onClick={() => {
                     setCountryMenu(false);
-                    if (c.id !== D.country) window.location.href = c.path;
+                    if (c.id !== activeCountry) window.location.href = c.path;
                   }}
                   style={{
                     width: '100%', display: 'flex', alignItems: 'center', gap: 10,
                     padding: '9px 10px', borderRadius: 8, border: 'none',
-                    background: c.id === D.country ? pal.accentSoft : 'transparent',
-                    color: pal.fg, fontSize: 12.5, fontWeight: c.id === D.country ? 700 : 500,
+                    background: c.id === activeCountry ? pal.accentSoft : 'transparent',
+                    color: pal.fg, fontSize: 12.5, fontWeight: c.id === activeCountry ? 700 : 500,
                     cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left'
                   }}>
                   <span style={{ fontSize: 16, lineHeight: 1 }}>{c.flag}</span>
                   <span>{c.name}</span>
-                  {c.id === D.country &&
+                  {c.id === activeCountry &&
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={pal.accent}
                          strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
                          style={{ marginLeft: 'auto' }}>
@@ -1109,21 +1114,23 @@ function App() {
         })}
         {!isMobile && (
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 20 }}>
-            <a href="https://worldcup.sportzone.is" style={{
-              display: 'inline-flex', alignItems: 'center', gap: 7,
-              padding: '6px 14px', borderRadius: 8,
-              border: `1.5px solid ${pal.accent}`,
-              background: pal.accentSoft,
-              fontSize: 12.5, fontWeight: 700, letterSpacing: '0.02em',
-              color: pal.accent, textDecoration: 'none',
-              fontFamily: '"Inter", sans-serif',
-              whiteSpace: 'nowrap',
-            }}>
-              HM karla 2026 · Dagskráin hér!
-            </a>
+            {activeCountry === 'is' && (
+              <a href="https://worldcup.sportzone.is" style={{
+                display: 'inline-flex', alignItems: 'center', gap: 7,
+                padding: '6px 14px', borderRadius: 8,
+                border: `1.5px solid ${pal.accent}`,
+                background: pal.accentSoft,
+                fontSize: 12.5, fontWeight: 700, letterSpacing: '0.02em',
+                color: pal.accent, textDecoration: 'none',
+                fontFamily: '"Inter", sans-serif',
+                whiteSpace: 'nowrap',
+              }}>
+                {t('wc.button')}
+              </a>
+            )}
             <div style={{ color: pal.muted, fontSize: 11,
               fontFamily: '"JetBrains Mono", monospace', whiteSpace: 'nowrap' }}>
-              {filtered.length} viðburðir sýndir
+              {t('stats.shown', { n: filtered.length })}
             </div>
           </div>
         )}
@@ -1174,7 +1181,7 @@ function App() {
                         : liveSessionType === 'Tímataka'
                           ? (isDark ? '#80C0FF' : '#1A60C0')
                           : pal.muted,
-                    }}>{liveSessionType.toUpperCase()}</span>
+                    }}>{(t(SESSION_KEY[liveSessionType]) || liveSessionType).toUpperCase()}</span>
                   )}
                   <div style={{
                     marginLeft: 'auto', padding: '2px 6px',

@@ -8,11 +8,11 @@
 // Edge caching via Cache-Control: s-maxage=300 (Vercel CDN caches for 5 minutes).
 
 import { fetchRuvSchedule }    from '../fetchers/ruv.js';
-import { fetchViaplaySchedule, fetchViaplaySeSchedule } from '../fetchers/viaplay.js';
+import { fetchViaplaySchedule } from '../fetchers/viaplay.js';
 import { fetchSynSchedule }    from '../fetchers/syn.js';
 import { fetchSiminnSchedule } from '../fetchers/siminn.js';
 import { fetchLiveySchedule }  from '../fetchers/livey.js';
-import { fetchTvnuSchedule }   from '../fetchers/tvnu.js';
+import { fetchTvnuSchedule, fetchViaplaySeWithFallback } from '../fetchers/tvnu.js';
 
 // ── Country → fetcher registry ─────────────────────────────────────────────
 const COUNTRY_FETCHERS = {
@@ -24,7 +24,7 @@ const COUNTRY_FETCHERS = {
     { name: 'Lívey',      fn: fetchLiveySchedule },
   ],
   se: [
-    { name: 'Viaplay SE', fn: fetchViaplaySeSchedule },
+    { name: 'Viaplay SE', fn: fetchViaplaySeWithFallback },
     { name: 'tv.nu',      fn: fetchTvnuSchedule },
   ],
 };
@@ -50,6 +50,8 @@ function sortEvents(events) {
 }
 
 // ── Fetch all events for a date ─────────────────────────────────────────────
+// Returns { events, sources } — sources holds per-fetcher counts/errors so
+// that ?debug=1 can surface exactly which data source failed and why.
 async function fetchAllEvents(date, country) {
   // Use native fetch (available in Node 18+ on Vercel)
   const f = globalThis.fetch;
@@ -58,18 +60,21 @@ async function fetchAllEvents(date, country) {
   const results = await Promise.allSettled(fetchers.map(({ fn }) => fn(date, f)));
 
   const allEvents = [];
+  const sources = [];
   for (let i = 0; i < results.length; i++) {
     const result = results[i];
     if (result.status === 'fulfilled') {
       console.log(`${fetchers[i].name}: ${result.value.length} events`);
+      sources.push({ name: fetchers[i].name, count: result.value.length });
       allEvents.push(...result.value);
     } else {
       console.error(`${fetchers[i].name} failed:`, result.reason?.message);
+      sources.push({ name: fetchers[i].name, error: result.reason?.message || 'unknown' });
     }
   }
 
   const deduped = deduplicateEvents(allEvents);
-  return sortEvents(deduped);
+  return { events: sortEvents(deduped), sources };
 }
 
 // ── Dr. Football — handvirk YouTube dagskrárfærsla ─────────────────────────
@@ -147,7 +152,7 @@ export default async function handler(req, res) {
 
     console.log(`Fetching events for ${dateStr} (${country})...`);
     const date = new Date(dateStr + 'T00:00:00Z');
-    const events = await fetchAllEvents(date, country);
+    const { events, sources } = await fetchAllEvents(date, country);
 
     // Bæta við Dr. Football YouTube þætti ef við á (aðeins Ísland)
     if (country === 'is') {
@@ -158,10 +163,18 @@ export default async function handler(req, res) {
 
     console.log(`Total events for ${dateStr} (${country}): ${events.length}`);
 
-    // Cache at the Vercel CDN edge for 5 minutes; serve stale while revalidating for 60s
-    res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=60');
+    const payload = { date: dateStr, country, events, cached: false };
+    // ?debug=1 — include per-source counts/errors (bypasses the edge cache so
+    // the numbers are always fresh).
+    if (req.query.debug === '1') {
+      payload.sources = sources;
+      res.setHeader('Cache-Control', 'no-store');
+    } else {
+      // Cache at the Vercel CDN edge for 5 minutes; serve stale while revalidating for 60s
+      res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=60');
+    }
     res.setHeader('Content-Type', 'application/json');
-    res.status(200).json({ date: dateStr, country, events, cached: false });
+    res.status(200).json(payload);
   } catch (err) {
     console.error('Error fetching events:', err);
     res.status(500).json({ error: 'Failed to fetch schedule', message: err.message });

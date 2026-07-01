@@ -7,13 +7,25 @@
 // TV4 Hockey, TV4 Motor, TV4 Tennis, TV4 Sportkanalen, TV4 Sport Live 1–4),
 // Eurosport 1/2 + Kanal 5/9 (Max/WBD) and ATG Live.
 //
-// V Sport channels are intentionally NOT fetched here — Viaplay content comes
-// from the Viaplay SE API (fetchers/viaplay.js) with richer metadata. If that
-// API turns out to be geo-blocked from the deployment region, add the
-// 'v-sport-*' slugs below as a fallback.
+// V Sport channels are NOT part of the main channel list — Viaplay content
+// comes from the Viaplay SE API (fetchers/viaplay.js) with richer metadata.
+// If that API returns nothing (e.g. geo-blocked from the deployment region),
+// fetchViaplaySeWithFallback() below falls back to the V Sport linear
+// channels via tv.nu instead.
+
+import { fetchViaplaySeSchedule } from './viaplay.js';
 
 const BASE_URL = 'https://web-api.tv.nu/channels';
 const TZ = 'Europe/Stockholm';
+
+// Browser-like headers — some CDNs reject bare bot-ish requests.
+const HEADERS = {
+  'Accept': 'application/json, text/plain, */*',
+  'Accept-Language': 'sv-SE,sv;q=0.9,en;q=0.8',
+  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+  'Referer': 'https://www.tv.nu/',
+  'Origin': 'https://www.tv.nu',
+};
 
 // slug → { name: display channel name, station: station group id in data.js,
 //          allSport: every broadcast is sport (dedicated sports channel) }
@@ -42,6 +54,26 @@ const CHANNELS = {
   'kanal-9':          { name: 'Kanal 9',           station: 'max',  allSport: false },
   // ATG Live — horse racing, free
   'atg-live':         { name: 'ATG Live',          station: 'atg',  allSport: true },
+};
+
+// V Sport linear channels — used only as a fallback when the Viaplay SE API
+// returns nothing (see fetchViaplaySeWithFallback).
+const V_SPORT_CHANNELS = {
+  'v-sport-1':               { name: 'V Sport 1',               station: 'viaplay', allSport: true },
+  'v-sport-extra':           { name: 'V Sport Extra',           station: 'viaplay', allSport: true },
+  'v-sport-premium':         { name: 'V Sport Premium',         station: 'viaplay', allSport: true },
+  'v-sport-football':        { name: 'V Sport Football',        station: 'viaplay', allSport: true },
+  'v-sport-football-live-1': { name: 'V Sport Football Live 1', station: 'viaplay', allSport: true },
+  'v-sport-football-live-2': { name: 'V Sport Football Live 2', station: 'viaplay', allSport: true },
+  'v-sport-football-live-3': { name: 'V Sport Football Live 3', station: 'viaplay', allSport: true },
+  'v-sport-live-1':          { name: 'V Sport Live 1',          station: 'viaplay', allSport: true },
+  'v-sport-live-2':          { name: 'V Sport Live 2',          station: 'viaplay', allSport: true },
+  'v-sport-live-3':          { name: 'V Sport Live 3',          station: 'viaplay', allSport: true },
+  'v-sport-live-4':          { name: 'V Sport Live 4',          station: 'viaplay', allSport: true },
+  'v-sport-live-5':          { name: 'V Sport Live 5',          station: 'viaplay', allSport: true },
+  'v-sport-golf':            { name: 'V Sport Golf',            station: 'viaplay', allSport: true },
+  'v-sport-motor':           { name: 'V Sport Motor',           station: 'viaplay', allSport: true },
+  'v-sport-vinter':          { name: 'V Sport Vinter',          station: 'viaplay', allSport: true },
 };
 
 // ── Sport detection (Swedish genre names + title keywords) ──────────────────
@@ -193,18 +225,13 @@ function normalizeBroadcast(item, slug, channel, dateStr) {
   };
 }
 
-export async function fetchTvnuSchedule(date, fetch) {
+async function fetchChannels(channels, date, fetch, label) {
   const dateStr = date.toISOString().slice(0, 10);
 
   const results = await Promise.allSettled(
-    Object.entries(CHANNELS).map(async ([slug, channel]) => {
+    Object.entries(channels).map(async ([slug, channel]) => {
       const url = `${BASE_URL}/${slug}/schedule?date=${dateStr}&fullDay=true`;
-      const resp = await fetch(url, {
-        headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (compatible; sportzone/1.0)',
-        },
-      });
+      const resp = await fetch(url, { headers: HEADERS });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const data = await resp.json();
       const broadcasts = data?.data?.broadcasts || [];
@@ -219,15 +246,41 @@ export async function fetchTvnuSchedule(date, fetch) {
   );
 
   const allEvents = [];
-  const slugs = Object.keys(CHANNELS);
+  const slugs = Object.keys(channels);
+  const failures = [];
   results.forEach((r, i) => {
     if (r.status === 'fulfilled') {
       allEvents.push(...r.value);
     } else {
-      console.warn(`tv.nu ${slugs[i]} failed:`, r.reason?.message);
+      failures.push(`${slugs[i]}: ${r.reason?.message}`);
     }
   });
+  if (failures.length) console.warn(`tv.nu(${label}) failures:`, failures.join(' | '));
 
-  console.log(`tv.nu sports events: ${allEvents.length}`);
+  console.log(`tv.nu(${label}) sports events: ${allEvents.length} (${failures.length}/${slugs.length} channels failed)`);
+  // If literally every channel failed, surface it as an error so the API's
+  // debug mode shows the real cause instead of a silent empty list.
+  if (failures.length === slugs.length) {
+    throw new Error(`all ${slugs.length} channels failed — first: ${failures[0]}`);
+  }
   return allEvents;
+}
+
+// Main tv.nu fetcher: SVT + TV4-family + Max/Eurosport + ATG.
+export async function fetchTvnuSchedule(date, fetch) {
+  return fetchChannels(CHANNELS, date, fetch, 'linear');
+}
+
+// Viaplay SE with fallback: try the Viaplay API first (richer metadata,
+// includes streaming-only events); if it yields nothing, fall back to the
+// V Sport linear channels via tv.nu.
+export async function fetchViaplaySeWithFallback(date, fetch) {
+  try {
+    const evs = await fetchViaplaySeSchedule(date, fetch);
+    if (evs.length > 0) return evs;
+    console.warn('Viaplay SE API returned 0 events — falling back to V Sport via tv.nu');
+  } catch (err) {
+    console.warn('Viaplay SE API failed — falling back to V Sport via tv.nu:', err.message);
+  }
+  return fetchChannels(V_SPORT_CHANNELS, date, fetch, 'v-sport');
 }

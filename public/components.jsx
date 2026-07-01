@@ -464,7 +464,7 @@ function LogoSlot({ label, hint, bg, url, isCustom, onUpload, onClear }) {
                                           objectFit: 'contain' }} />
         ) : (
           <div style={{ color: bg === '#FFFFFF' ? '#999' : '#666',
-                        fontSize: 11 }}>Engin mynd</div>
+                        fontSize: 11 }}>{window.IF_I18N ? window.IF_I18N.t('logo.noImage') : 'Engin mynd'}</div>
         )}
       </div>
       <div style={{ fontSize: 10.5, color: 'var(--if-muted)', lineHeight: 1.4 }}>
