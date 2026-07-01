@@ -170,8 +170,9 @@ export default async function handler(req, res) {
       payload.sources = sources;
       res.setHeader('Cache-Control', 'no-store');
     } else {
-      // Cache at the Vercel CDN edge for 5 minutes; serve stale while revalidating for 60s
-      res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=60');
+      // Cache at the Vercel CDN edge for 5 minutes; serve stale for up to an
+      // hour while revalidating — keeps most traffic off the upstream APIs.
+      res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=3600');
     }
     res.setHeader('Content-Type', 'application/json');
     res.status(200).json(payload);

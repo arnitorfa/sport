@@ -164,19 +164,27 @@ function App() {
 
   // Prefetch all dates in the background — stores both counts and full event
   // lists so that cross-date search works without extra round-trips.
+  // SEQUENTIAL on purpose: each date triggers a backend fan-out to the
+  // upstream schedule APIs, and firing all 10 dates at once got us rate
+  // limited (HTTP 429) by tv.nu. One at a time is plenty for a background
+  // prefetch and keeps the per-IP request rate low.
   React.useEffect(() => {
-    D.dates.forEach((d) => {
-      if (dayCounts[d.isoDate] !== undefined) return; // already fetched
-      fetch(eventsUrl(d.isoDate))
-        .then((r) => r.json())
-        .then((data) => {
+    let cancelled = false;
+    (async () => {
+      for (const d of D.dates) {
+        if (cancelled) return;
+        if (dayCounts[d.isoDate] !== undefined) continue; // already fetched
+        try {
+          const data = await fetch(eventsUrl(d.isoDate)).then((r) => r.json());
+          if (cancelled) return;
           const evs = data.events || [];
           setDayCounts((prev) => ({ ...prev, [d.isoDate]: evs.length }));
           setEventsByDate((prev) => ({ ...prev, [d.isoDate]: evs }));
           if (d.offset === 0) setTodayEvents(evs); // keep today panel fresh
-        })
-        .catch(() => {});
-    });
+        } catch (e) { /* skip failed date, continue with the rest */ }
+      }
+    })();
+    return () => { cancelled = true; };
   // Run once on mount
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

@@ -32,7 +32,7 @@ const HEADERS = {
 // level semaphore caps TOTAL concurrency across all fetchers in this module
 // (linear + v-sport fallback run in parallel), and 429/5xx responses are
 // retried with backoff.
-const MAX_CONCURRENT = 4;
+const MAX_CONCURRENT = 2;
 let _active = 0;
 const _waiters = [];
 
@@ -51,22 +51,51 @@ async function withSlot(fn) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function fetchJsonWithRetry(url, fetch, attempts = 3) {
+async function fetchJsonWithRetry(url, fetch, attempts = 4, deadline = Infinity) {
   let lastErr;
   for (let i = 0; i < attempts; i++) {
-    if (i > 0) await sleep(400 * i + Math.random() * 300); // backoff + jitter
+    if (i > 0) {
+      // Give up retrying when the overall time budget is spent — better to
+      // return partial results than to blow the serverless maxDuration.
+      if (Date.now() > deadline) break;
+      await sleep(700 * i + Math.random() * 400); // backoff + jitter
+    }
     try {
       const resp = await fetch(url, { headers: HEADERS });
       if (resp.ok) return resp.json();
       lastErr = new Error(`HTTP ${resp.status}`);
       // Retry only on rate limiting / server errors
       if (resp.status !== 429 && resp.status < 500) throw lastErr;
+      // Honor Retry-After (seconds) when the server provides it
+      const ra = resp.headers && resp.headers.get && parseInt(resp.headers.get('retry-after'), 10);
+      if (ra > 0 && ra <= 10) await sleep(ra * 1000);
     } catch (err) {
       lastErr = err;
       if (!/HTTP (429|5\d\d)/.test(err.message)) throw err;
     }
   }
   throw lastErr;
+}
+
+// In-memory response cache + single-flight, keyed by URL. Spares warm lambdas
+// from re-fetching the same channel/date (e.g. v-sport fallback right after
+// the linear pass, or repeated invocations within the TTL).
+const CACHE_TTL_MS = 4 * 60 * 1000;
+const _cache = new Map();
+
+function cachedFetchJson(url, fetch, deadline) {
+  const hit = _cache.get(url);
+  if (hit && Date.now() - hit.t < CACHE_TTL_MS) return hit.p;
+  const p = withSlot(() => fetchJsonWithRetry(url, fetch, 4, deadline));
+  _cache.set(url, { t: Date.now(), p });
+  // Drop failed promises from the cache so the next call retries fresh
+  p.catch(() => { if (_cache.get(url)?.p === p) _cache.delete(url); });
+  // Opportunistic pruning
+  if (_cache.size > 600) {
+    const cutoff = Date.now() - CACHE_TTL_MS;
+    for (const [k, v] of _cache) { if (v.t < cutoff) _cache.delete(k); }
+  }
+  return p;
 }
 
 // slug → { name: display channel name, station: station group id in data.js,
@@ -327,11 +356,14 @@ function normalizeBroadcast(item, slug, channel, dateStr) {
 
 async function fetchChannels(channels, date, fetch, label) {
   const dateStr = date.toISOString().slice(0, 10);
+  // Overall time budget for this pass — retries stop once it's spent, so the
+  // serverless function (maxDuration 30s) always returns what it has.
+  const deadline = Date.now() + 20000;
 
   const results = await Promise.allSettled(
     Object.entries(channels).map(async ([slug, channel]) => {
       const url = `${BASE_URL}/${slug}/schedule?date=${dateStr}&fullDay=true`;
-      const data = await withSlot(() => fetchJsonWithRetry(url, fetch));
+      const data = await cachedFetchJson(url, fetch, deadline);
       const broadcasts = data?.data?.broadcasts || [];
       const events = [];
       for (const item of broadcasts) {
