@@ -132,6 +132,36 @@ Allar stöðvar sækja dagskrá sjálfkrafa — engin innskráning þarf:
 
 **Landval:** dropdown í haus vefsins. `/` = Ísland (íslenska), `/se` = Svíþjóð (sænska). Tungumál fylgir landi; `?lang=xx` yfirskrifar til prófunar. Nýtt land: bæta færslu í `COUNTRIES` í `public/i18n.js`, stöðvalista í `public/data.js`, fetchers í `COUNTRY_FETCHERS` í `api/events.js` og rewrite í `vercel.json`.
 
+### Dagskrár-cache í Supabase (nauðsynlegt fyrir Svíþjóð)
+
+tv.nu hraðatakmarkar (HTTP 429) þegar sótt er of ört. `api/events.js` geymir því hverja sókn í Supabase-töflu og endursækir aðeins á ~45 mín fresti — öll önnur umferð fer í töfluna. Uppsetning (einu sinni):
+
+1. **Supabase → SQL Editor** — keyrðu:
+
+```sql
+create table if not exists schedule_cache (
+  country    text        not null,
+  date       date        not null,
+  payload    jsonb       not null,
+  fetched_at timestamptz not null default now(),
+  primary key (country, date)
+);
+alter table schedule_cache enable row level security;
+```
+
+(Engar RLS-reglur — aðeins service-lykillinn kemst í töfluna.)
+
+2. **Supabase → Settings → API** — afritaðu `service_role` lykilinn (EKKI anon-lykilinn).
+
+3. **Vercel → Settings → Environment Variables** — bættu við:
+   - Nafn: `SUPABASE_SERVICE_KEY`
+   - Gildi: service_role lykillinn
+   - Environments: Production (og Preview ef vill)
+
+4. **Redeploy.**
+
+Ef lykillinn vantar sleppir kerfið cache-inu og virkar eins og áður (en þá lendir tv.nu-umferðin aftur í 429). Kerfið ver sig líka sjálft: circuit breaker slekkur á tv.nu köllum í 60 sek eftir ítrekuð 429, og ef allar veitur bregðast er síðasta gilda svar úr töflunni notað.
+
 ---
 
 ## 3. Uppfæra merkið og nafnið

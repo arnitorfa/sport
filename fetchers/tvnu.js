@@ -33,6 +33,7 @@ const HEADERS = {
 // (linear + v-sport fallback run in parallel), and 429/5xx responses are
 // retried with backoff.
 const MAX_CONCURRENT = 2;
+const REQUEST_SPACING_MS = 250; // pause per slot after each request — caps the sustained rate at ~4 req/s
 let _active = 0;
 const _waiters = [];
 
@@ -43,6 +44,8 @@ async function withSlot(fn) {
   _active++;
   try { return await fn(); }
   finally {
+    // Hold the slot briefly so the overall request rate stays gentle
+    await sleep(REQUEST_SPACING_MS);
     _active--;
     const next = _waiters.shift();
     if (next) next();
@@ -51,18 +54,53 @@ async function withSlot(fn) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// ── Circuit breaker ──────────────────────────────────────────────────────────
+// When tv.nu rate-limits us hard (429 on everything), continuing to fire
+// requests only extends the penalty window. After CIRCUIT_THRESHOLD
+// consecutive final 429 failures the circuit "opens": every call fails
+// instantly (no HTTP traffic) for CIRCUIT_COOLDOWN_MS, then one request is
+// let through to probe; a success closes the circuit again.
+const CIRCUIT_THRESHOLD = 4;
+const CIRCUIT_COOLDOWN_MS = 60 * 1000;
+let _consecutive429 = 0;
+let _circuitOpenUntil = 0;
+let _probing = false;
+
+function circuitOpen() {
+  return Date.now() < _circuitOpenUntil;
+}
+
+function noteFailure429() {
+  _consecutive429++;
+  if (_consecutive429 >= CIRCUIT_THRESHOLD) {
+    _circuitOpenUntil = Date.now() + CIRCUIT_COOLDOWN_MS;
+  }
+}
+
+function noteSuccess() {
+  _consecutive429 = 0;
+  _circuitOpenUntil = 0;
+  _probing = false;
+}
+
 async function fetchJsonWithRetry(url, fetch, attempts = 4, deadline = Infinity) {
+  // Circuit open → fail fast without touching tv.nu (allow one probe through)
+  if (circuitOpen()) {
+    if (_probing) throw new Error('HTTP 429 (circuit open)');
+    _probing = true; // this call becomes the probe
+  }
   let lastErr;
   for (let i = 0; i < attempts; i++) {
     if (i > 0) {
       // Give up retrying when the overall time budget is spent — better to
       // return partial results than to blow the serverless maxDuration.
       if (Date.now() > deadline) break;
+      if (circuitOpen() && !_probing) break;
       await sleep(700 * i + Math.random() * 400); // backoff + jitter
     }
     try {
       const resp = await fetch(url, { headers: HEADERS });
-      if (resp.ok) return resp.json();
+      if (resp.ok) { noteSuccess(); return resp.json(); }
       lastErr = new Error(`HTTP ${resp.status}`);
       // Retry only on rate limiting / server errors
       if (resp.status !== 429 && resp.status < 500) throw lastErr;
@@ -74,6 +112,8 @@ async function fetchJsonWithRetry(url, fetch, attempts = 4, deadline = Infinity)
       if (!/HTTP (429|5\d\d)/.test(err.message)) throw err;
     }
   }
+  if (/HTTP 429/.test(lastErr?.message || '')) noteFailure429();
+  if (_probing) _probing = false;
   throw lastErr;
 }
 
@@ -118,30 +158,25 @@ const CHANNELS = {
   'tv4-sport-live-2': { name: 'TV4 Sport Live 2',  station: 'tv4',  allSport: true },
   'tv4-sport-live-3': { name: 'TV4 Sport Live 3',  station: 'tv4',  allSport: true },
   'tv4-sport-live-4': { name: 'TV4 Sport Live 4',  station: 'tv4',  allSport: true },
-  // Warner Bros. Discovery (Max) — Eurosport linear + Kanal 5/9
+  // Warner Bros. Discovery (Max) — Eurosport linear
+  // (Kanal 5/9 dropped: sport is rare there and every extra channel costs a
+  //  request against tv.nu's tight rate limit)
   'eurosport-1':      { name: 'Eurosport 1',       station: 'max',  allSport: true },
   'eurosport-2':      { name: 'Eurosport 2',       station: 'max',  allSport: true },
-  'kanal-5':          { name: 'Kanal 5',           station: 'max',  allSport: false },
-  'kanal-9':          { name: 'Kanal 9',           station: 'max',  allSport: false },
   // ATG Live — horse racing, free
   'atg-live':         { name: 'ATG Live',          station: 'atg',  allSport: true },
 };
 
 // V Sport linear channels — used only as a fallback when the Viaplay SE API
-// returns nothing (see fetchViaplaySeWithFallback).
+// returns nothing (see fetchViaplaySeWithFallback). Core channels only:
+// every extra channel is a request against tv.nu's tight rate limit.
 const V_SPORT_CHANNELS = {
   'v-sport-1':               { name: 'V Sport 1',               station: 'viaplay', allSport: true },
   'v-sport-extra':           { name: 'V Sport Extra',           station: 'viaplay', allSport: true },
   'v-sport-premium':         { name: 'V Sport Premium',         station: 'viaplay', allSport: true },
   'v-sport-football':        { name: 'V Sport Football',        station: 'viaplay', allSport: true },
-  'v-sport-football-live-1': { name: 'V Sport Football Live 1', station: 'viaplay', allSport: true },
-  'v-sport-football-live-2': { name: 'V Sport Football Live 2', station: 'viaplay', allSport: true },
-  'v-sport-football-live-3': { name: 'V Sport Football Live 3', station: 'viaplay', allSport: true },
   'v-sport-live-1':          { name: 'V Sport Live 1',          station: 'viaplay', allSport: true },
   'v-sport-live-2':          { name: 'V Sport Live 2',          station: 'viaplay', allSport: true },
-  'v-sport-live-3':          { name: 'V Sport Live 3',          station: 'viaplay', allSport: true },
-  'v-sport-live-4':          { name: 'V Sport Live 4',          station: 'viaplay', allSport: true },
-  'v-sport-live-5':          { name: 'V Sport Live 5',          station: 'viaplay', allSport: true },
   'v-sport-golf':            { name: 'V Sport Golf',            station: 'viaplay', allSport: true },
   'v-sport-motor':           { name: 'V Sport Motor',           station: 'viaplay', allSport: true },
   'v-sport-vinter':          { name: 'V Sport Vinter',          station: 'viaplay', allSport: true },
@@ -393,24 +428,43 @@ async function fetchChannels(channels, date, fetch, label) {
   if (failures.length === slugs.length) {
     throw new Error(`all ${slugs.length} channels failed — first: ${failures[0]}`);
   }
+  // Partial-failure metadata for the API layer (non-JSON property on the
+  // array — invisible in the response, visible to fetchAllEvents).
+  allEvents.failedChannels = failures.length;
+  allEvents.totalChannels = slugs.length;
   return allEvents;
 }
 
-// Main tv.nu fetcher: SVT + TV4-family + Max/Eurosport + ATG.
+// The in-flight linear pass — the v-sport fallback waits for it so the two
+// passes never compete for the rate-limited budget at the same time (and the
+// prioritised SVT/TV4 channels always go first).
+let _linearPass = null;
+
+// Main tv.nu fetcher: SVT + TV4-family + Eurosport + ATG.
 export async function fetchTvnuSchedule(date, fetch) {
-  return fetchChannels(CHANNELS, date, fetch, 'linear');
+  _linearPass = fetchChannels(CHANNELS, date, fetch, 'linear');
+  try { return await _linearPass; }
+  finally { _linearPass = null; }
 }
 
 // Viaplay SE with fallback: try the Viaplay API first (richer metadata,
 // includes streaming-only events); if it yields nothing, fall back to the
-// V Sport linear channels via tv.nu.
+// V Sport linear channels via tv.nu — but only after the linear pass is done.
 export async function fetchViaplaySeWithFallback(date, fetch) {
+  let vpReason = '0 events';
   try {
     const evs = await fetchViaplaySeSchedule(date, fetch);
     if (evs.length > 0) return evs;
     console.warn('Viaplay SE API returned 0 events — falling back to V Sport via tv.nu');
   } catch (err) {
+    vpReason = err.message;
     console.warn('Viaplay SE API failed — falling back to V Sport via tv.nu:', err.message);
   }
-  return fetchChannels(V_SPORT_CHANNELS, date, fetch, 'v-sport');
+  // Let the linear channels finish first — they matter more than the fallback
+  if (_linearPass) await _linearPass.catch(() => {});
+  try {
+    return await fetchChannels(V_SPORT_CHANNELS, date, fetch, 'v-sport');
+  } catch (err) {
+    throw new Error(`viaplay api: ${vpReason}; v-sport fallback: ${err.message}`);
+  }
 }

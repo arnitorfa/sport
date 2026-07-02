@@ -29,6 +29,94 @@ const COUNTRY_FETCHERS = {
   ],
 };
 
+// ── Durable schedule cache (Supabase) ───────────────────────────────────────
+// One upstream fan-out per (country, date) per CACHE_FRESH_MS — every other
+// request is served from the schedule_cache table. This keeps us from
+// hammering upstream APIs (tv.nu rate-limits aggressively) and gives us
+// stale-but-real data to serve when an upstream is down or blocking us.
+//
+// Setup (once):
+//   1. Run in the Supabase SQL editor:
+//        create table if not exists schedule_cache (
+//          country    text        not null,
+//          date       date        not null,
+//          payload    jsonb       not null,
+//          fetched_at timestamptz not null default now(),
+//          primary key (country, date)
+//        );
+//        alter table schedule_cache enable row level security;
+//      (no policies — only the service key can touch it)
+//   2. In Vercel: Settings → Environment Variables →
+//        SUPABASE_SERVICE_KEY = <service_role key from Supabase → Settings → API>
+//
+// If the env var is missing the cache is skipped and everything works as before.
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://kbmjtondcqupdsumgyex.supabase.co';
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const CACHE_FRESH_MS = 45 * 60 * 1000;        // refetch upstream after 45 minutes
+const CACHE_FRESH_PARTIAL_MS = 10 * 60 * 1000; // incomplete fetches retry sooner
+
+function sbHeaders() {
+  return {
+    'apikey': SUPABASE_SERVICE_KEY,
+    'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+    'Content-Type': 'application/json',
+  };
+}
+
+async function cacheRead(country, dateStr) {
+  if (!SUPABASE_SERVICE_KEY) return null;
+  try {
+    const url = `${SUPABASE_URL}/rest/v1/schedule_cache?country=eq.${country}&date=eq.${dateStr}&select=payload,fetched_at`;
+    const resp = await fetch(url, { headers: sbHeaders() });
+    if (!resp.ok) return null;
+    const rows = await resp.json();
+    if (!rows.length) return null;
+    // Payload is either a bare events array (v1) or { events, partial } (v2)
+    const raw = rows[0].payload;
+    const events = Array.isArray(raw) ? raw : (raw?.events || []);
+    const partial = Array.isArray(raw) ? false : !!raw?.partial;
+    return {
+      events,
+      partial,
+      ageMs: Date.now() - new Date(rows[0].fetched_at).getTime(),
+    };
+  } catch (err) {
+    console.warn('schedule_cache read failed:', err.message);
+    return null;
+  }
+}
+
+async function cacheWrite(country, dateStr, payload) {
+  if (!SUPABASE_SERVICE_KEY) return;
+  try {
+    const url = `${SUPABASE_URL}/rest/v1/schedule_cache`;
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { ...sbHeaders(), 'Prefer': 'resolution=merge-duplicates' },
+      body: JSON.stringify([{ country, date: dateStr, payload, fetched_at: new Date().toISOString() }]),
+    });
+    if (!resp.ok) console.warn('schedule_cache write failed: HTTP', resp.status);
+  } catch (err) {
+    console.warn('schedule_cache write failed:', err.message);
+  }
+}
+
+// Recompute live/upcoming/done from the timestamps — cached events carry the
+// status they had when fetched, which goes stale within minutes.
+function recomputeStatus(events) {
+  const now = Date.now();
+  for (const ev of events) {
+    if (!ev.startIso) continue;
+    const start = new Date(ev.startIso).getTime();
+    const end = ev.endIso ? new Date(ev.endIso).getTime() : start + 2 * 60 * 60 * 1000;
+    if (isNaN(start)) continue;
+    if (now < start) ev.status = 'upcoming';
+    else if (now < end) ev.status = 'live';
+    else ev.status = 'done';
+  }
+  return events;
+}
+
 // ── Event deduplication ─────────────────────────────────────────────────────
 function deduplicateEvents(events) {
   const seen = new Set();
@@ -65,7 +153,12 @@ async function fetchAllEvents(date, country) {
     const result = results[i];
     if (result.status === 'fulfilled') {
       console.log(`${fetchers[i].name}: ${result.value.length} events`);
-      sources.push({ name: fetchers[i].name, count: result.value.length });
+      const src = { name: fetchers[i].name, count: result.value.length };
+      // tv.nu fetchers report how many channels individually failed
+      if (result.value.failedChannels > 0) {
+        src.failedChannels = `${result.value.failedChannels}/${result.value.totalChannels}`;
+      }
+      sources.push(src);
       allEvents.push(...result.value);
     } else {
       console.error(`${fetchers[i].name} failed:`, result.reason?.message);
@@ -150,24 +243,69 @@ export default async function handler(req, res) {
     // Country: 'is' (default) or 'se'
     const country = COUNTRY_FETCHERS[req.query.country] ? req.query.country : 'is';
 
-    console.log(`Fetching events for ${dateStr} (${country})...`);
-    const date = new Date(dateStr + 'T00:00:00Z');
-    const { events, sources } = await fetchAllEvents(date, country);
+    const debug = req.query.debug === '1';
+    const meta = { cacheHit: false, cacheAgeMin: null, servedStale: false };
 
-    // Bæta við Dr. Football YouTube þætti ef við á (aðeins Ísland)
-    if (country === 'is') {
-      const drFb = drFootballEvent(dateStr);
-      if (drFb) events.push(drFb);
+    // 1) Durable cache — fresh entry short-circuits the upstream fan-out
+    const cached = await cacheRead(country, dateStr);
+    let events = null;
+    let sources = null;
+    // Complete fetches stay fresh for 45 min; partial ones retry after 10
+    const freshMs = cached && cached.partial ? CACHE_FRESH_PARTIAL_MS : CACHE_FRESH_MS;
+    if (cached && cached.ageMs < freshMs) {
+      events = recomputeStatus(cached.events);
+      meta.cacheHit = true;
+      meta.cacheAgeMin = Math.round(cached.ageMs / 60000);
+      console.log(`schedule_cache hit for ${country}/${dateStr} (${meta.cacheAgeMin} min old${cached.partial ? ', partial' : ''})`);
+    } else {
+      // 2) Upstream fan-out
+      console.log(`Fetching events for ${dateStr} (${country})...`);
+      const date = new Date(dateStr + 'T00:00:00Z');
+      const result = await fetchAllEvents(date, country);
+      sources = result.sources;
+      const allFailed = sources.every((s) => s.error);
+      const partial = sources.some((s) => s.error || s.failedChannels);
+
+      if (!allFailed) {
+        events = result.events;
+        // Bæta við Dr. Football YouTube þætti ef við á (aðeins Ísland)
+        if (country === 'is') {
+          const drFb = drFootballEvent(dateStr);
+          if (drFb) events.push(drFb);
+        }
+        sortEvents(events);
+        // Don't overwrite a fuller cached copy with a worse partial one
+        const worseThanCache = partial && cached && cached.events.length > events.length;
+        if (worseThanCache) {
+          events = recomputeStatus(cached.events);
+          meta.servedStale = true;
+          meta.cacheAgeMin = Math.round(cached.ageMs / 60000);
+        } else {
+          // Persist (fire and forget); partial results get a shorter freshness
+          cacheWrite(country, dateStr, { v: 2, events, partial });
+        }
+      } else if (cached) {
+        // 3) Every upstream failed → serve the stale-but-real cached copy
+        events = recomputeStatus(cached.events);
+        meta.servedStale = true;
+        meta.cacheAgeMin = Math.round(cached.ageMs / 60000);
+        console.warn(`All sources failed for ${country}/${dateStr} — serving stale cache (${meta.cacheAgeMin} min old)`);
+      } else {
+        events = [];
+      }
     }
-    sortEvents(events);
 
     console.log(`Total events for ${dateStr} (${country}): ${events.length}`);
 
-    const payload = { date: dateStr, country, events, cached: false };
-    // ?debug=1 — include per-source counts/errors (bypasses the edge cache so
-    // the numbers are always fresh).
-    if (req.query.debug === '1') {
+    const payload = { date: dateStr, country, events, cached: meta.cacheHit || meta.servedStale };
+    if (debug) {
       payload.sources = sources;
+      payload.cacheInfo = meta;
+      payload.region = process.env.VERCEL_REGION || 'unknown';
+      // debug always bypasses the edge cache so the numbers are fresh
+      res.setHeader('Cache-Control', 'no-store');
+    } else if (events.length === 0 && sources && sources.every((s) => s.error)) {
+      // Total failure with nothing to fall back on — never cache an empty answer
       res.setHeader('Cache-Control', 'no-store');
     } else {
       // Cache at the Vercel CDN edge for 5 minutes; serve stale for up to an

@@ -181,6 +181,9 @@ function App() {
           setDayCounts((prev) => ({ ...prev, [d.isoDate]: evs.length }));
           setEventsByDate((prev) => ({ ...prev, [d.isoDate]: evs }));
           if (d.offset === 0) setTodayEvents(evs); // keep today panel fresh
+          // Breathe between dates — each uncached date costs the backend a
+          // fan-out against rate-limited upstream APIs.
+          if (!data.cached) await new Promise((r) => setTimeout(r, 4000));
         } catch (e) { /* skip failed date, continue with the rest */ }
       }
     })();
