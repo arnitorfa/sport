@@ -372,6 +372,7 @@ function normalizeBroadcast(item, slug, channel, dateStr) {
 
   return {
     id: `tvnu-${slug}-${item.id || start.toISOString()}`,
+    channelSlug: slug, // used by the incremental cache merge in api/events.js
     time: start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: TZ }),
     endTime: end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: TZ }),
     startIso: start.toISOString(),
@@ -389,14 +390,18 @@ function normalizeBroadcast(item, slug, channel, dateStr) {
   };
 }
 
-async function fetchChannels(channels, date, fetch, label) {
+// Fetch a set of channels; never throws. Returns { events, ok, failed } where
+// ok/failed are channel-slug lists — the incremental layer in api/events.js
+// uses them to track which channels still need fetching.
+async function fetchChannelSet(channels, date, fetch, label) {
   const dateStr = date.toISOString().slice(0, 10);
   // Overall time budget for this pass — retries stop once it's spent, so the
   // serverless function (maxDuration 30s) always returns what it has.
   const deadline = Date.now() + 20000;
 
+  const entries = Object.entries(channels);
   const results = await Promise.allSettled(
-    Object.entries(channels).map(async ([slug, channel]) => {
+    entries.map(async ([slug, channel]) => {
       const url = `${BASE_URL}/${slug}/schedule?date=${dateStr}&fullDay=true`;
       const data = await cachedFetchJson(url, fetch, deadline);
       const broadcasts = data?.data?.broadcasts || [];
@@ -411,28 +416,64 @@ async function fetchChannels(channels, date, fetch, label) {
   );
 
   const allEvents = [];
-  const slugs = Object.keys(channels);
-  const failures = [];
+  const ok = [];
+  const failed = [];
+  const failMsgs = [];
   results.forEach((r, i) => {
+    const slug = entries[i][0];
     if (r.status === 'fulfilled') {
+      ok.push(slug);
       allEvents.push(...r.value);
     } else {
-      failures.push(`${slugs[i]}: ${r.reason?.message}`);
+      failed.push(slug);
+      failMsgs.push(`${slug}: ${r.reason?.message}`);
     }
   });
-  if (failures.length) console.warn(`tv.nu(${label}) failures:`, failures.join(' | '));
+  if (failMsgs.length) console.warn(`tv.nu(${label}) failures:`, failMsgs.join(' | '));
+  console.log(`tv.nu(${label}) events: ${allEvents.length} (${failed.length}/${entries.length} channels failed)`);
+  return { events: allEvents, ok, failed, firstError: failMsgs[0] || null };
+}
 
-  console.log(`tv.nu(${label}) sports events: ${allEvents.length} (${failures.length}/${slugs.length} channels failed)`);
-  // If literally every channel failed, surface it as an error so the API's
-  // debug mode shows the real cause instead of a silent empty list.
-  if (failures.length === slugs.length) {
-    throw new Error(`all ${slugs.length} channels failed — first: ${failures[0]}`);
+// Legacy full-pass fetcher (kept for the Docker server / simple setups).
+async function fetchChannels(channels, date, fetch, label) {
+  const r = await fetchChannelSet(channels, date, fetch, label);
+  if (r.ok.length === 0 && r.failed.length > 0) {
+    throw new Error(`all ${r.failed.length} channels failed — first: ${r.firstError}`);
   }
-  // Partial-failure metadata for the API layer (non-JSON property on the
-  // array — invisible in the response, visible to fetchAllEvents).
-  allEvents.failedChannels = failures.length;
-  allEvents.totalChannels = slugs.length;
-  return allEvents;
+  r.events.failedChannels = r.failed.length;
+  r.events.totalChannels = r.ok.length + r.failed.length;
+  return r.events;
+}
+
+// ── Incremental fetching (used by api/events.js with the Supabase cache) ────
+// tv.nu's rate limit only tolerates a handful of requests per burst, so the
+// API layer fetches the pool in small prioritised batches and accumulates the
+// results in its durable cache. Order = importance: the big free/major sports
+// channels first, niche channels last.
+export const TVNU_POOL_ORDER = [
+  'svt1', 'svt2', 'tv4',
+  'tv4-fotboll', 'tv4-hockey', 'v-sport-1', 'tv4-sportkanalen', 'eurosport-1',
+  'v-sport-premium', 'v-sport-football', 'tv4-motor', 'tv4-tennis',
+  'eurosport-2', 'svt24', 'v-sport-extra', 'atg-live',
+  'tv4-sport-live-1', 'tv4-sport-live-2', 'sjuan', 'tv12',
+  'v-sport-live-1', 'v-sport-live-2', 'v-sport-golf', 'v-sport-motor',
+  'v-sport-vinter', 'tv4-sport-live-3', 'tv4-sport-live-4',
+];
+const POOL_MAP = { ...CHANNELS, ...V_SPORT_CHANNELS };
+
+// Which pool slugs belong to the V Sport (Viaplay) group — skipped when the
+// Viaplay API itself is delivering.
+export function isVSportSlug(slug) {
+  return (POOL_MAP[slug] || {}).station === 'viaplay';
+}
+
+// Fetch a specific list of pool slugs. Never throws.
+export async function fetchTvnuChannels(date, fetch, slugs) {
+  const subset = {};
+  for (const slug of slugs) {
+    if (POOL_MAP[slug]) subset[slug] = POOL_MAP[slug];
+  }
+  return fetchChannelSet(subset, date, fetch, 'incremental');
 }
 
 // The in-flight linear pass — the v-sport fallback waits for it so the two
@@ -441,6 +482,8 @@ async function fetchChannels(channels, date, fetch, label) {
 let _linearPass = null;
 
 // Main tv.nu fetcher: SVT + TV4-family + Eurosport + ATG.
+// (Full pass — used by the Docker server; the Vercel API uses the
+// incremental functions above instead.)
 export async function fetchTvnuSchedule(date, fetch) {
   _linearPass = fetchChannels(CHANNELS, date, fetch, 'linear');
   try { return await _linearPass; }

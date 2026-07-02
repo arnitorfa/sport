@@ -8,13 +8,16 @@
 // Edge caching via Cache-Control: s-maxage=300 (Vercel CDN caches for 5 minutes).
 
 import { fetchRuvSchedule }    from '../fetchers/ruv.js';
-import { fetchViaplaySchedule } from '../fetchers/viaplay.js';
+import { fetchViaplaySchedule, fetchViaplaySeSchedule } from '../fetchers/viaplay.js';
 import { fetchSynSchedule }    from '../fetchers/syn.js';
 import { fetchSiminnSchedule } from '../fetchers/siminn.js';
 import { fetchLiveySchedule }  from '../fetchers/livey.js';
-import { fetchTvnuSchedule, fetchViaplaySeWithFallback } from '../fetchers/tvnu.js';
+import { TVNU_POOL_ORDER, fetchTvnuChannels, isVSportSlug } from '../fetchers/tvnu.js';
 
 // ── Country → fetcher registry ─────────────────────────────────────────────
+// Iceland uses the classic full fan-out (its upstreams are friendly).
+// Sweden is handled by fetchSwedenEvents below — tv.nu rate-limits hard, so
+// its channels are fetched incrementally and accumulated in the durable cache.
 const COUNTRY_FETCHERS = {
   is: [
     { name: 'RÚV',        fn: fetchRuvSchedule },
@@ -23,10 +26,7 @@ const COUNTRY_FETCHERS = {
     { name: 'Síminn',     fn: fetchSiminnSchedule },
     { name: 'Lívey',      fn: fetchLiveySchedule },
   ],
-  se: [
-    { name: 'Viaplay SE', fn: fetchViaplaySeWithFallback },
-    { name: 'tv.nu',      fn: fetchTvnuSchedule },
-  ],
+  se: [], // custom incremental flow — see fetchSwedenEvents
 };
 
 // ── Durable schedule cache (Supabase) ───────────────────────────────────────
@@ -53,7 +53,8 @@ const COUNTRY_FETCHERS = {
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://kbmjtondcqupdsumgyex.supabase.co';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const CACHE_FRESH_MS = 45 * 60 * 1000;        // refetch upstream after 45 minutes
-const CACHE_FRESH_PARTIAL_MS = 10 * 60 * 1000; // incomplete fetches retry sooner
+const CACHE_FRESH_PARTIAL_MS = 3 * 60 * 1000;  // incomplete fetches take the next incremental step sooner
+const TVNU_BATCH_SIZE = 8;                     // max tv.nu channels per invocation
 
 function sbHeaders() {
   return {
@@ -71,13 +72,16 @@ async function cacheRead(country, dateStr) {
     if (!resp.ok) return null;
     const rows = await resp.json();
     if (!rows.length) return null;
-    // Payload is either a bare events array (v1) or { events, partial } (v2)
+    // Payload: bare events array (v1), { events, partial } (v2) or
+    // { events, partial, okChannels, viaplayOk } (v3, incremental Sweden)
     const raw = rows[0].payload;
     const events = Array.isArray(raw) ? raw : (raw?.events || []);
     const partial = Array.isArray(raw) ? false : !!raw?.partial;
     return {
       events,
       partial,
+      okChannels: (!Array.isArray(raw) && raw?.okChannels) || [],
+      viaplayOk: !Array.isArray(raw) && !!raw?.viaplayOk,
       ageMs: Date.now() - new Date(rows[0].fetched_at).getTime(),
     };
   } catch (err) {
@@ -170,6 +174,75 @@ async function fetchAllEvents(date, country) {
   return { events: sortEvents(deduped), sources };
 }
 
+// ── Sweden: incremental fetch + merge ───────────────────────────────────────
+// tv.nu tolerates only a handful of requests per burst, so each invocation:
+//   1. tries the Viaplay SE API (1 cheap request — covers all V Sport content)
+//   2. fetches the next TVNU_BATCH_SIZE un-fetched channels from the pool
+//   3. merges the results into whatever the durable cache already has
+// `okChannels` in the cache tracks progress; after a few 3-minute steps the
+// full pool is covered and the entry behaves like a complete 45-min cache.
+async function fetchSwedenEvents(date, cachedState) {
+  const f = globalThis.fetch;
+  const sources = [];
+
+  let events = cachedState ? [...cachedState.events] : [];
+  const ok = new Set(cachedState ? cachedState.okChannels : []);
+  let viaplayOk = false;
+
+  // 1) Viaplay SE API — refreshed on every pass (single request)
+  try {
+    const vp = await fetchViaplaySeSchedule(date, f);
+    if (vp.length > 0) {
+      viaplayOk = true;
+      // Replace all previous Viaplay-sourced events (API + v-sport linear)
+      events = events.filter((e) =>
+        !String(e.id || '').startsWith('viaplay-') &&
+        !(e.channelSlug && isVSportSlug(e.channelSlug)));
+      events.push(...vp);
+      sources.push({ name: 'Viaplay SE', count: vp.length });
+    } else {
+      sources.push({ name: 'Viaplay SE', error: '0 events (v-sport channels via tv.nu instead)' });
+    }
+  } catch (err) {
+    sources.push({ name: 'Viaplay SE', error: err.message });
+  }
+
+  // 2) Next batch of tv.nu channels — v-sport slugs excluded while the
+  //    Viaplay API is delivering
+  const pool = TVNU_POOL_ORDER.filter((slug) => !(viaplayOk && isVSportSlug(slug)));
+  const missing = pool.filter((slug) => !ok.has(slug)).slice(0, TVNU_BATCH_SIZE);
+
+  if (missing.length > 0) {
+    const r = await fetchTvnuChannels(date, f, missing);
+    // Replace any stale events of the channels we just re-fetched, then merge
+    const fetched = new Set(r.ok);
+    events = events.filter((e) => !(e.channelSlug && fetched.has(e.channelSlug)));
+    events.push(...r.events);
+    r.ok.forEach((slug) => ok.add(slug));
+    const remaining = pool.filter((slug) => !ok.has(slug)).length;
+    sources.push({
+      name: 'tv.nu',
+      count: events.filter((e) => e.channelSlug).length,
+      batch: `${r.ok.length}/${missing.length} ok`,
+      remainingChannels: remaining,
+      ...(r.firstError ? { firstError: r.firstError } : {}),
+    });
+  } else {
+    sources.push({ name: 'tv.nu', count: events.filter((e) => e.channelSlug).length, remainingChannels: 0 });
+  }
+
+  const remaining = pool.filter((slug) => !ok.has(slug)).length;
+  const partial = remaining > 0;
+
+  return {
+    events: sortEvents(deduplicateEvents(events)),
+    okChannels: [...ok],
+    viaplayOk,
+    partial,
+    sources,
+  };
+}
+
 // ── Dr. Football — handvirk YouTube dagskrárfærsla ─────────────────────────
 // "Góðan daginn Epic Ameríka" á YouTube rásinni Dr. Football
 // Birtist á öllum virkum dögum (Mán–Fös) á meðan HM 2026 er í gangi.
@@ -244,7 +317,7 @@ export default async function handler(req, res) {
     const country = COUNTRY_FETCHERS[req.query.country] ? req.query.country : 'is';
 
     const debug = req.query.debug === '1';
-    const meta = { cacheHit: false, cacheAgeMin: null, servedStale: false };
+    const meta = { cacheEnabled: !!SUPABASE_SERVICE_KEY, cacheHit: false, cacheAgeMin: null, servedStale: false };
 
     // 1) Durable cache — fresh entry short-circuits the upstream fan-out
     const cached = await cacheRead(country, dateStr);
@@ -255,16 +328,36 @@ export default async function handler(req, res) {
     if (cached && cached.ageMs < freshMs) {
       events = recomputeStatus(cached.events);
       meta.cacheHit = true;
+      meta.partial = cached.partial;
       meta.cacheAgeMin = Math.round(cached.ageMs / 60000);
       console.log(`schedule_cache hit for ${country}/${dateStr} (${meta.cacheAgeMin} min old${cached.partial ? ', partial' : ''})`);
+    } else if (country === 'se') {
+      // 2a) Sweden: incremental fetch + merge (see fetchSwedenEvents).
+      // After a full freshness cycle the channel bookkeeping resets so
+      // everything gets re-fetched — but the old events stay as the base
+      // until each channel's fresh data replaces them.
+      const state = cached ? {
+        events: cached.events,
+        okChannels: cached.ageMs >= CACHE_FRESH_MS ? [] : cached.okChannels,
+      } : null;
+      const date = new Date(dateStr + 'T00:00:00Z');
+      const result = await fetchSwedenEvents(date, state);
+      sources = result.sources;
+      events = recomputeStatus(result.events);
+      meta.partial = result.partial;
+      cacheWrite(country, dateStr, {
+        v: 3, events, partial: result.partial,
+        okChannels: result.okChannels, viaplayOk: result.viaplayOk,
+      });
     } else {
-      // 2) Upstream fan-out
+      // 2b) Full upstream fan-out (Iceland)
       console.log(`Fetching events for ${dateStr} (${country})...`);
       const date = new Date(dateStr + 'T00:00:00Z');
       const result = await fetchAllEvents(date, country);
       sources = result.sources;
       const allFailed = sources.every((s) => s.error);
       const partial = sources.some((s) => s.error || s.failedChannels);
+      meta.partial = partial;
 
       if (!allFailed) {
         events = result.events;
@@ -307,6 +400,10 @@ export default async function handler(req, res) {
     } else if (events.length === 0 && sources && sources.every((s) => s.error)) {
       // Total failure with nothing to fall back on — never cache an empty answer
       res.setHeader('Cache-Control', 'no-store');
+    } else if (meta.partial) {
+      // Incomplete (incremental fill in progress) — short edge cache so the
+      // next step's fuller result reaches users quickly
+      res.setHeader('Cache-Control', 's-maxage=120, stale-while-revalidate=600');
     } else {
       // Cache at the Vercel CDN edge for 5 minutes; serve stale for up to an
       // hour while revalidating — keeps most traffic off the upstream APIs.
