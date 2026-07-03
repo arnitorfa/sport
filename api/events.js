@@ -395,6 +395,10 @@ export default async function handler(req, res) {
       payload.sources = sources;
       payload.cacheInfo = meta;
       payload.region = process.env.VERCEL_REGION || 'unknown';
+      // Which SUPABASE* env vars the function actually sees (names only —
+      // values are never exposed). Diagnoses "cacheEnabled: false" mysteries.
+      payload.supabaseEnvKeys = Object.keys(process.env)
+        .filter((k) => k.toUpperCase().includes('SUPABASE'));
       // debug always bypasses the edge cache so the numbers are fresh
       res.setHeader('Cache-Control', 'no-store');
     } else if (events.length === 0 && sources && sources.every((s) => s.error)) {
