@@ -371,7 +371,9 @@ function normalizeBroadcast(item, slug, channel, dateStr) {
   const comp = titleComp || mappedGenre || specificGenre || '';
 
   return {
-    id: `tvnu-${slug}-${item.id || start.toISOString()}`,
+    // item.id alone is NOT unique — the same programme can air twice in a day
+    // (live + rerun share the id), so the start time is part of the key.
+    id: `tvnu-${slug}-${item.id || ''}-${start.getTime()}`,
     channelSlug: slug, // used by the incremental cache merge in api/events.js
     time: start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: TZ }),
     endTime: end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: TZ }),
