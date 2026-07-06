@@ -14,7 +14,9 @@ const VIAPLAY_COUNTRIES = {
     fallbackTitle: 'Íþróttaviðburður',
   },
   se: {
-    baseUrl: 'https://content.viaplay.se/pcdash-se/sport/all',
+    // NB: Sweden has no "/sport/all" — the section path is just "/sport"
+    // (?date=YYYY-MM-DD works the same way as in Iceland).
+    baseUrl: 'https://content.viaplay.se/pcdash-se/sport',
     sourceUrl: 'https://viaplay.se/se-sv/',
     timeZone: 'Europe/Stockholm',
     fallbackTitle: 'Sportevenemang',
@@ -72,6 +74,11 @@ const VIAPLAY_SPORT_MAP = {
   'formula1':           'f1',
   'formula2':           'f1',
   'formula3':           'f1',
+  // Swedish slugs (normalized: hyphens are stripped before lookup)
+  'formel1':            'f1',
+  'formel2':            'f1',
+  'formel3':            'f1',
+  'formele':            'f1',
   'indycar':            'f1',
   'nascar':             'f1',
   'dtm':                'f1',
