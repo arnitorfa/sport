@@ -24,6 +24,8 @@ import { fetchSynSchedule }    from './fetchers/syn.js';
 import { fetchSiminnSchedule } from './fetchers/siminn.js';
 import { fetchLiveySchedule }  from './fetchers/livey.js';
 import { fetchTvnuSchedule, fetchViaplaySeWithFallback } from './fetchers/tvnu.js';
+import { fetchNbaSchedule } from './fetchers/nba.js';
+import { fetchNflSchedule } from './fetchers/nfl.js';
 
 // ── Country → fetcher registry ─────────────────────────────────────────────
 const COUNTRY_FETCHERS = {
@@ -35,8 +37,10 @@ const COUNTRY_FETCHERS = {
     { name: 'Lívey',      fn: fetchLiveySchedule },
   ],
   se: [
-    { name: 'Viaplay SE', fn: fetchViaplaySeWithFallback },
-    { name: 'tv.nu',      fn: fetchTvnuSchedule },
+    { name: 'Viaplay SE',      fn: fetchViaplaySeWithFallback },
+    { name: 'tv.nu',           fn: fetchTvnuSchedule },
+    { name: 'NBA League Pass', fn: fetchNbaSchedule },
+    { name: 'DAZN · NFL',      fn: fetchNflSchedule },
   ],
 };
 

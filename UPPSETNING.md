@@ -123,10 +123,12 @@ Allar stöðvar sækja dagskrá sjálfkrafa — engin innskráning þarf:
 | Viaplay / V Sport | `content.viaplay.se` (sama API og á Íslandi) |
 | SVT (SVT1/SVT2/SVT24) | `web-api.tv.nu` (opinber dagskrárveita) |
 | TV4-fjölskyldan (TV4, Sjuan, TV12, TV4 Fotboll/Hockey/Motor/Tennis, Sportkanalen, Sport Live 1–4) | `web-api.tv.nu` |
-| Max / Eurosport (Eurosport 1/2, Kanal 5/9) | `web-api.tv.nu` |
+| Max / Eurosport (Eurosport 1/2) | `web-api.tv.nu` |
 | ATG Live | `web-api.tv.nu` |
+| NBA League Pass (allir NBA-leikir) | `cdn.nba.com` (opinbert dagskrár-JSON) |
+| DAZN — NFL Game Pass (allir NFL-leikir) | ESPN scoreboard API (opinbert) |
 
-> **Amazon Prime** (hluti af Premier League) er ekki með opið dagskrár-API og er því ekki með — bætist við síðar ef veita finnst.
+> **Amazon Prime** (hluti af Premier League) og **box á DAZN** eiga ekki opin dagskrár-API og eru því ekki með — bætast við síðar ef veitur finnast. NBA-leikir eru merktir NBA League Pass (þar eru þeir allir); hluti þeirra er einnig á HBO Max.
 >
 > **Athugið:** `vercel.json` stillir keyrslusvæðið á `arn1` (Stokkhólm) svo `content.viaplay.se` svari (getur verið lokað utan Norðurlanda). Ef Viaplay SE skilar engu eftir deploy má bæta `v-sport-*` rásunum við í `fetchers/tvnu.js` sem varaleið — sjá athugasemd efst í þeirri skrá.
 

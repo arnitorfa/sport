@@ -13,6 +13,8 @@ import { fetchSynSchedule }    from '../fetchers/syn.js';
 import { fetchSiminnSchedule } from '../fetchers/siminn.js';
 import { fetchLiveySchedule }  from '../fetchers/livey.js';
 import { TVNU_POOL_ORDER, fetchTvnuChannels, isVSportSlug } from '../fetchers/tvnu.js';
+import { fetchNbaSchedule } from '../fetchers/nba.js';
+import { fetchNflSchedule } from '../fetchers/nfl.js';
 
 // ── Country → fetcher registry ─────────────────────────────────────────────
 // Iceland uses the classic full fan-out (its upstreams are friendly).
@@ -189,22 +191,41 @@ async function fetchSwedenEvents(date, cachedState) {
   const ok = new Set(cachedState ? cachedState.okChannels : []);
   let viaplayOk = false;
 
-  // 1) Viaplay SE API — refreshed on every pass (single request)
-  try {
-    const vp = await fetchViaplaySeSchedule(date, f);
-    if (vp.length > 0) {
-      viaplayOk = true;
-      // Replace all previous Viaplay-sourced events (API + v-sport linear)
-      events = events.filter((e) =>
-        !String(e.id || '').startsWith('viaplay-') &&
-        !(e.channelSlug && isVSportSlug(e.channelSlug)));
-      events.push(...vp);
-      sources.push({ name: 'Viaplay SE', count: vp.length });
+  // 1) Direct APIs — all cheap, refreshed on every pass, run in parallel:
+  //    Viaplay SE (V Sport + streaming), NBA (League Pass), NFL (DAZN)
+  const [vpResult, nbaResult, nflResult] = await Promise.allSettled([
+    fetchViaplaySeSchedule(date, f),
+    fetchNbaSchedule(date, f),
+    fetchNflSchedule(date, f),
+  ]);
+
+  if (vpResult.status === 'fulfilled' && vpResult.value.length > 0) {
+    viaplayOk = true;
+    // Replace all previous Viaplay-sourced events (API + v-sport linear)
+    events = events.filter((e) =>
+      !String(e.id || '').startsWith('viaplay-') &&
+      !(e.channelSlug && isVSportSlug(e.channelSlug)));
+    events.push(...vpResult.value);
+    sources.push({ name: 'Viaplay SE', count: vpResult.value.length });
+  } else if (vpResult.status === 'fulfilled') {
+    sources.push({ name: 'Viaplay SE', error: '0 events (v-sport channels via tv.nu instead)' });
+  } else {
+    sources.push({ name: 'Viaplay SE', error: vpResult.reason?.message });
+  }
+
+  // NBA / NFL: replace that station's events when the fetch succeeded; on
+  // failure the previously cached ones stay in place.
+  for (const [result, station, name] of [
+    [nbaResult, 'nba', 'NBA League Pass'],
+    [nflResult, 'dazn', 'DAZN · NFL'],
+  ]) {
+    if (result.status === 'fulfilled') {
+      events = events.filter((e) => e.station !== station);
+      events.push(...result.value);
+      sources.push({ name, count: result.value.length });
     } else {
-      sources.push({ name: 'Viaplay SE', error: '0 events (v-sport channels via tv.nu instead)' });
+      sources.push({ name, error: result.reason?.message });
     }
-  } catch (err) {
-    sources.push({ name: 'Viaplay SE', error: err.message });
   }
 
   // 2) Next batch of tv.nu channels — v-sport slugs excluded while the
