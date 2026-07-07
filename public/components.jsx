@@ -135,7 +135,7 @@ function StarPopover({ event, follows, toggleFollow, onClose, anchor }) {
       <div style={{ fontSize: 10.5, fontWeight: 800, color: 'var(--if-muted)',
                     letterSpacing: '0.18em', textTransform: 'uppercase',
                     marginBottom: 10 }}>
-        Bæta við uppáhalds
+        {window.IF_I18N ? window.IF_I18N.t('fav.add') : 'Bæta við uppáhalds'}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         {event.subjects.map(sub => {
@@ -427,7 +427,7 @@ function LogoSettings({ stations, logos, setLogos, onClose }) {
           color: 'var(--if-fg)', fontSize: 13, fontWeight: 600, cursor: 'pointer',
           fontFamily: 'inherit',
         }}>
-          Loka
+          {window.IF_I18N ? window.IF_I18N.t('picker.close') : 'Loka'}
         </button>
       </div>
     </div>

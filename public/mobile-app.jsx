@@ -644,7 +644,7 @@ function MobileApp({ dark, onThemeChange }) {
                 <polyline points="16 17 21 12 16 7"/>
                 <line x1="21" y1="12" x2="9" y2="12"/>
               </svg>
-              Skrá út
+              {t('nav.signOut')}
             </button>
           </div>
         </div>
@@ -926,12 +926,12 @@ function MSportPicker({ D, pal, selectedSports, toggle, clearAll, onClose }) {
               background: 'transparent', border: 'none',
               color: pal.muted, fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
             }}>
-              Hreinsa val
+              {t('picker.clear')}
             </button>
           )}
         </div>
         <div style={{ fontSize: 11, color: pal.muted, marginBottom: 14, lineHeight: 1.4 }}>
-          Veldu eina eða fleiri íþróttir til að sía listann.
+          {t('picker.hint')}
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
           {sports.map((sp) => {
@@ -998,7 +998,7 @@ function MSubjectPicker({ event, follows, toggleFollow, pal, onClose }) {
                       margin: '0 auto 14px' }} />
         <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.20em',
                       textTransform: 'uppercase', color: pal.muted, marginBottom: 6 }}>
-          Bæta við uppáhalds
+          {t('fav.add')}
         </div>
         <div style={{ fontSize: 15.5, fontWeight: 700, lineHeight: 1.2,
                       letterSpacing: '-0.01em', marginBottom: 12 }}>

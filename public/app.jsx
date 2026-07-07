@@ -1158,7 +1158,7 @@ function App() {
           </div>
           {live.length === 0 &&
           <div style={{ color: pal.muted, fontSize: 12, lineHeight: 1.5 }}>
-              Enginn í gangi með þessar síur.
+              {t('empty.live')}
             </div>
           }
           {live.map((ev) => {
@@ -1373,7 +1373,7 @@ function App() {
                           <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="1s" repeatCount="indefinite"/>
                         </path>
                       </svg>
-                      Sæki dagskrá…
+                      {t('loading.schedule')}
                     </div>
                   </div>
                 )}

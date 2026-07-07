@@ -118,6 +118,7 @@ window.IF_I18N = (function () {
 
       // Loading / empty states
       'loading.schedule': 'Loading schedule…',
+      'empty.live': 'Nothing live with these filters.',
       'empty.filters': 'No events found with these filters.',
       'empty.day': 'No sports events found on this day.',
       'empty.search': 'No events found for "{q}".',
@@ -152,6 +153,8 @@ window.IF_I18N = (function () {
       'picker.pickSports': 'Choose sports',
       'picker.showAll': 'Show all',
       'picker.show': 'Show',
+      'picker.clear': 'Clear selection',
+      'picker.hint': 'Pick one or more sports to filter the list.',
       'unit.sportOne': 'sport',
       'unit.sportMany': 'sports',
       'mobile.sportsAll': 'Sports',
@@ -162,6 +165,7 @@ window.IF_I18N = (function () {
       'fav.comp': 'Competition',
       'fav.series': 'Series',
       'fav.title': 'Favourites',
+      'fav.add': 'Add to favourites',
       'fav.autoNotePre': 'Everything you follow appears automatically in ',
       'fav.autoNotePost': '.',
       'login.sentToPre': 'We sent a link to ',
@@ -251,6 +255,7 @@ window.IF_I18N = (function () {
 
       // Loading / empty states
       'loading.schedule': 'Sæki dagskrá…',
+      'empty.live': 'Enginn í gangi með þessar síur.',
       'empty.filters': 'Engir viðburðir fundust með þessum síum.',
       'empty.day': 'Engir íþróttaviðburðir fundust á þessum degi.',
       'empty.search': 'Engir viðburðir fundust fyrir „{q}".',
@@ -299,6 +304,8 @@ window.IF_I18N = (function () {
       'picker.pickSports': 'Veldu íþróttir',
       'picker.showAll': 'Sýna allt',
       'picker.show': 'Sýna',
+      'picker.clear': 'Hreinsa val',
+      'picker.hint': 'Veldu eina eða fleiri íþróttir til að sía listann.',
       'unit.sportOne': 'íþrótt',
       'unit.sportMany': 'íþróttir',
       'mobile.sportsAll': 'Íþróttir',
@@ -309,6 +316,7 @@ window.IF_I18N = (function () {
       'fav.comp': 'Keppni',
       'fav.series': 'Mótaröð',
       'fav.title': 'Uppáhalds',
+      'fav.add': 'Bæta við uppáhalds',
       'fav.autoNotePre': 'Þú færð allt sem þú fylgir sjálfkrafa í ',
       'fav.autoNotePost': '.',
       'login.sentToPre': 'Við sendum þér hlekk á ',
@@ -413,6 +421,7 @@ window.IF_I18N = (function () {
 
       // Loading / empty states
       'loading.schedule': 'Hämtar tablån…',
+      'empty.live': 'Inget live just nu med dessa filter.',
       'empty.filters': 'Inga sändningar hittades med dessa filter.',
       'empty.day': 'Inga sportsändningar hittades den här dagen.',
       'empty.search': 'Inga sändningar hittades för ”{q}”.',
@@ -447,6 +456,8 @@ window.IF_I18N = (function () {
       'picker.pickSports': 'Välj sporter',
       'picker.showAll': 'Visa allt',
       'picker.show': 'Visa',
+      'picker.clear': 'Rensa val',
+      'picker.hint': 'Välj en eller flera sporter för att filtrera listan.',
       'unit.sportOne': 'sport',
       'unit.sportMany': 'sporter',
       'mobile.sportsAll': 'Sporter',
@@ -457,6 +468,7 @@ window.IF_I18N = (function () {
       'fav.comp': 'Turnering',
       'fav.series': 'Serie',
       'fav.title': 'Favoriter',
+      'fav.add': 'Lägg till favorit',
       'fav.autoNotePre': 'Allt du följer hamnar automatiskt i ',
       'fav.autoNotePost': '.',
       'login.sentToPre': 'Vi har skickat en länk till ',
