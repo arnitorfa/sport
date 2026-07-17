@@ -56,7 +56,19 @@ const SUPABASE_URL = process.env.SUPABASE_URL || 'https://kbmjtondcqupdsumgyex.s
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const CACHE_FRESH_MS = 45 * 60 * 1000;        // refetch upstream after 45 minutes
 const CACHE_FRESH_PARTIAL_MS = 3 * 60 * 1000;  // incomplete fetches take the next incremental step sooner
+const SERVE_STALE_MAX_MS = 12 * 60 * 60 * 1000; // serve-while-refreshing window
 const TVNU_BATCH_SIZE = 8;                     // max tv.nu channels per invocation
+
+// Schedule work to continue AFTER the response is sent. On Vercel this uses
+// waitUntil (keeps the lambda alive); anywhere else we just await inline.
+async function runInBackground(promise) {
+  try {
+    const { waitUntil } = await import('@vercel/functions');
+    waitUntil(promise);
+  } catch (e) {
+    await promise;
+  }
+}
 
 function sbHeaders() {
   return {
@@ -357,19 +369,39 @@ export default async function handler(req, res) {
       // After a full freshness cycle the channel bookkeeping resets so
       // everything gets re-fetched — but the old events stay as the base
       // until each channel's fresh data replaces them.
-      const state = cached ? {
-        events: cached.events,
-        okChannels: cached.ageMs >= CACHE_FRESH_MS ? [] : cached.okChannels,
-      } : null;
-      const date = new Date(dateStr + 'T00:00:00Z');
-      const result = await fetchSwedenEvents(date, state);
-      sources = result.sources;
-      events = recomputeStatus(result.events);
-      meta.partial = result.partial;
-      cacheWrite(country, dateStr, {
-        v: 3, events, partial: result.partial,
-        okChannels: result.okChannels, viaplayOk: result.viaplayOk,
-      });
+      const refreshSe = async () => {
+        const state = cached ? {
+          events: cached.events,
+          okChannels: cached.ageMs >= CACHE_FRESH_MS ? [] : cached.okChannels,
+        } : null;
+        const date = new Date(dateStr + 'T00:00:00Z');
+        const result = await fetchSwedenEvents(date, state);
+        const evs = recomputeStatus(result.events);
+        await cacheWrite(country, dateStr, {
+          v: 3, events: evs, partial: result.partial,
+          okChannels: result.okChannels, viaplayOk: result.viaplayOk,
+        });
+        return { events: evs, sources: result.sources, partial: result.partial };
+      };
+
+      if (cached && cached.ageMs < SERVE_STALE_MAX_MS && !debug) {
+        // FAST PATH: serve what we have immediately, refresh after the
+        // response is sent. The upstream pass (tv.nu pacing, retries) can
+        // take many seconds — the user should never wait for it.
+        events = recomputeStatus(cached.events);
+        meta.cacheHit = true;
+        meta.servedStale = true;
+        meta.partial = cached.partial;
+        meta.cacheAgeMin = Math.round(cached.ageMs / 60000);
+        await runInBackground(refreshSe().catch((e) =>
+          console.error('SE background refresh failed:', e.message)));
+      } else {
+        // No cache yet (or debug mode) — fetch inline
+        const result = await refreshSe();
+        events = result.events;
+        sources = result.sources;
+        meta.partial = result.partial;
+      }
     } else {
       // 2b) Full upstream fan-out (Iceland)
       console.log(`Fetching events for ${dateStr} (${country})...`);
@@ -425,6 +457,10 @@ export default async function handler(req, res) {
     } else if (events.length === 0 && sources && sources.every((s) => s.error)) {
       // Total failure with nothing to fall back on — never cache an empty answer
       res.setHeader('Cache-Control', 'no-store');
+    } else if (meta.servedStale) {
+      // Served from cache while refreshing in the background — very short
+      // edge cache so the refreshed data reaches users on the next request
+      res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=600');
     } else if (meta.partial) {
       // Incomplete (incremental fill in progress) — short edge cache so the
       // next step's fuller result reaches users quickly

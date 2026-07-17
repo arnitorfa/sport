@@ -45,7 +45,17 @@ function detectSport(flokkur, title) {
       text.includes('allsvenskan') || text.includes('eliteserien'))
     return 'fb';
 
-  if (text.includes('golf')) return 'golf';
+  // Golf — includes majors/tours whose names don't contain the word "golf"
+  // ("The Open" was previously falling through to the football default).
+  if (text.includes('golf') || text.includes('the open') ||
+      text.includes('opna breska') || text.includes('opna bandaríska') ||
+      text.includes('pga') || text.includes('lpga') ||
+      text.includes('ryder cup') || text.includes('dp world tour') ||
+      text.includes('solheim cup') ||
+      // "Masters" is golf unless it's the snooker/darts Masters
+      (text.includes('masters') && !text.includes('snooker') &&
+       !text.includes('snóker') && !text.includes('darts') && !text.includes('pílu')))
+    return 'golf';
 
   if (text.includes('tennis') || text.includes('wimbledon') ||
       text.includes('roland garros') || text.includes('atp') ||

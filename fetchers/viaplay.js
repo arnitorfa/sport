@@ -145,7 +145,10 @@ function detectViaplaySport(publicPath, title, seriesTitle) {
   if (t.includes('football') || t.includes('fótbolti') || t.includes('premier league') ||
       t.includes('champions league') || t.includes('bundesliga')) return 'fb';
   if (t.includes('tennis')) return 'tennis';
-  if (t.includes('golf')) return 'golf';
+  if (t.includes('golf') || t.includes('the open') ||
+      t.includes('pga') || t.includes('lpga') || t.includes('ryder cup') ||
+      t.includes('dp world tour') || t.includes('solheim cup') ||
+      (t.includes('masters') && !t.includes('snooker') && !t.includes('darts'))) return 'golf';
   if (t.includes('hockey') || t.includes('nhl')) return 'hockey';
   if (t.includes('basketball') || t.includes('nba')) return 'kb';
   if (t.includes('handball') || t.includes('handbolti')) return 'hb';
