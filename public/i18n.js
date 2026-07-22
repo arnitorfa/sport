@@ -69,6 +69,7 @@ window.IF_I18N = (function () {
       'sport.tennis': 'Tennis',
       'sport.cycling': 'Cycling',
       'sport.hesta': 'Equestrian',
+      'sport.crossfit': 'CrossFit',
       'sport.other': 'Other',
       'sport.rowing': 'Rugby',
 
@@ -220,6 +221,7 @@ window.IF_I18N = (function () {
       'sport.tennis': 'Tennis',
       'sport.cycling': 'Hjólreiðar',
       'sport.hesta': 'Hestaíþróttir',
+      'sport.crossfit': 'CrossFit',
       'sport.other': 'Óflokkað',
       'sport.rowing': 'Ruðningur',
 
@@ -372,6 +374,7 @@ window.IF_I18N = (function () {
       'sport.tennis': 'Tennis',
       'sport.cycling': 'Cykling',
       'sport.hesta': 'Hästsport',
+      'sport.crossfit': 'CrossFit',
       'sport.other': 'Övrigt',
       'sport.rowing': 'Rugby',
 
