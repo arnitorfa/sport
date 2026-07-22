@@ -318,6 +318,58 @@ function drFootballEvent(dateStr) {
   };
 }
 
+// ── CrossFit Games — handvirk YouTube dagskrárfærsla ───────────────────────
+// Streymt frítt á opinberu CrossFit Games YouTube rásinni, aðgengilegt um
+// allan heim — svo við sýnum þetta í öllum löndum. Nákvæm dagskrá hvers dags
+// er ekki birt fyrirfram (æfingar afhjúpaðar jafnóðum), svo við notum breiðan
+// dagsglugga sem nær yfir aðal-útsendingartímann (síðdegis/kvöld ísl. tíma).
+const CROSSFIT_START = '2026-07-21';
+const CROSSFIT_END   = '2026-07-26';
+
+function crossFitGamesEvent(dateStr) {
+  if (dateStr < CROSSFIT_START || dateStr > CROSSFIT_END) return null;
+
+  // Masters keppa 21.–23. júlí, einstaklingar & lið 24.–26. júlí.
+  const isMasters = dateStr <= '2026-07-23';
+  const sub = isMasters ? 'Masters' : 'Individuals & Teams';
+
+  // Útsendingargluggi: 15:00–23:59 (Íslandstími / UTC+0) — nær yfir daginn
+  // í San José (PDT, UTC−7) þegar keppt er.
+  const now = new Date();
+  const start = new Date(dateStr + 'T15:00:00Z');
+  const end   = new Date(dateStr + 'T23:59:00Z');
+  let status = 'upcoming';
+  if (start <= now && now < end) status = 'live';
+  else if (end < now) status = 'done';
+
+  return {
+    id: `crossfit-${dateStr}`,
+    time: '15:00',
+    endTime: '23:59',
+    startIso: start.toISOString(),
+    endIso:   end.toISOString(),
+    sport: 'crossfit',
+    station: 'youtube',
+    channelName: 'YouTube',
+    title: 'CrossFit Games 2026',
+    sub,
+    comp: 'CrossFit Games',
+    status,
+    subjects: [{ key: 'c:crossfitgames', label: 'CrossFit Games', type: 'comp' }],
+    image: null,
+    sourceUrl: 'https://www.youtube.com/@CrossFitGamesTV/streams',
+  };
+}
+
+// Manual global YouTube events shown in every country, added fresh to each
+// response (never persisted to cache, so live/upcoming/done stays correct).
+function globalManualEvents(dateStr) {
+  const out = [];
+  const cf = crossFitGamesEvent(dateStr);
+  if (cf) out.push(cf);
+  return out;
+}
+
 // ── Vercel handler ──────────────────────────────────────────────────────────
 export default async function handler(req, res) {
   // CORS headers
@@ -439,6 +491,15 @@ export default async function handler(req, res) {
       } else {
         events = [];
       }
+    }
+
+    // Global manual YouTube events (CrossFit Games etc.) — added fresh to every
+    // response regardless of country or cache path, so their live/upcoming/done
+    // status is always current and they're never persisted stale.
+    const manual = globalManualEvents(dateStr);
+    if (manual.length) {
+      events = [...events, ...manual];
+      sortEvents(events);
     }
 
     console.log(`Total events for ${dateStr} (${country}): ${events.length}`);
