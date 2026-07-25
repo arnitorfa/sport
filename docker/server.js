@@ -116,6 +116,10 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() });
 });
 
+// NB: the Vercel API (api/events.js) adds manual global YouTube events
+// (CrossFit Games etc.) with real stream times from the YouTube Data API.
+// The Docker/NAS server here is a simpler deployment and omits that layer.
+
 // Country pages — same SPA, country detected client-side from the URL path
 app.get('/se', (req, res) => {
   res.sendFile(join(frontendPath, 'index.html'));

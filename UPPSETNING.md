@@ -164,6 +164,16 @@ alter table schedule_cache enable row level security;
 
 Ef lykillinn vantar sleppir kerfið cache-inu og virkar eins og áður (en þá lendir tv.nu-umferðin aftur í 429). Kerfið ver sig líka sjálft: circuit breaker slekkur á tv.nu köllum í 60 sek eftir ítrekuð 429, og ef allar veitur bregðast er síðasta gilda svar úr töflunni notað.
 
+### YouTube-útsendingar (CrossFit Games o.fl.) — valfrjálst en æskilegt
+
+Sumar íþróttir eru streymdar frítt á YouTube (t.d. CrossFit Games). Til að fá **nákvæma útsendingartíma** (byrjun getur verið breytileg og stundum eru fleiri en ein útsending á dag) notar kerfið YouTube Data API. Uppsetning (einu sinni):
+
+1. **Google Cloud Console** ([console.cloud.google.com](https://console.cloud.google.com)) → búa til verkefni → **APIs & Services → Library** → virkja **YouTube Data API v3**.
+2. **APIs & Services → Credentials → Create credentials → API key** → afrita lykilinn.
+3. **Vercel → Settings → Environment Variables** → `YOUTUBE_API_KEY` = lykillinn (Production) → **Redeploy**.
+
+Án lykils birtist CrossFit Games sem einn fastur dagsgluggi (15:00–23:59) í stað raunverulegu straumanna — virkar en er ónákvæmt. Kvóti API-sins (10.000 einingar/dag ókeypis) dugar vel; kerfið geymir svör í minni í 4 mín. Rásar-ID og tímabil eru stillt efst í `api/events.js` (`CROSSFIT_CHANNEL`, `CROSSFIT_START/END`).
+
 ---
 
 ## 3. Uppfæra merkið og nafnið
