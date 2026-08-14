@@ -46,7 +46,7 @@ window.IF_I18N = (function () {
       // Sport categories
       'sport.all': 'All',
       'sport.fav': 'Favourites',
-      'sport.hm2026': 'WC 2026',
+      'sport.epl': 'Premier League',
       'sport.fb': 'Football',
       'sport.hb': 'Handball',
       'sport.kb': 'Basketball',
@@ -198,7 +198,7 @@ window.IF_I18N = (function () {
       // Sport categories (keyed by sport id from data.js)
       'sport.all': 'Allt',
       'sport.fav': 'Uppáhalds',
-      'sport.hm2026': 'HM 2026',
+      'sport.epl': 'Enski boltinn',
       'sport.fb': 'Fótbolti',
       'sport.hb': 'Handbolti',
       'sport.kb': 'Körfubolti',
@@ -351,7 +351,7 @@ window.IF_I18N = (function () {
       // Sport categories
       'sport.all': 'Allt',
       'sport.fav': 'Favoriter',
-      'sport.hm2026': 'VM 2026',
+      'sport.epl': 'Premier League',
       'sport.fb': 'Fotboll',
       'sport.hb': 'Handboll',
       'sport.kb': 'Basket',

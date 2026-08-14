@@ -7,7 +7,7 @@ window.IF_DATA = (function () {
     // ── Primary row (always visible) — 9 sports + Fleiri = 10 slots ──────────
     { id: 'all',       name: 'Allt' },
     { id: 'fav',       name: 'Uppáhalds' },
-    { id: 'hm2026',    name: 'HM 2026' },
+    { id: 'epl',       name: 'Enski boltinn' },
     { id: 'fb',        name: 'Fótbolti' },
     { id: 'hb',        name: 'Handbolti' },
     { id: 'kb',        name: 'Körfubolti' },
@@ -181,6 +181,7 @@ window.IF_DATA = (function () {
           <polygon points="11.76 7.92 11.76 7.33 11.17 7.33 11.17 7.92 11.76 7.92 11.76 7.92"/>
           <polygon points="4.96 5.89 4.37 5.89 4.37 6.48 4.96 6.48 4.96 5.89 4.96 5.89"/>
         `);
+      case 'epl':  // Enski boltinn — deilir fótboltatákninu
       case 'fb':
         return wrap(`
           <circle cx="11.98" cy="11.91" r="9.4"/>

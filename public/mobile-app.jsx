@@ -144,9 +144,10 @@ function MobileApp({ dark, onThemeChange }) {
   const toggleSport = (id) => {
     if (id === 'all') { setSelectedSports(new Set()); return; }
     const next = new Set(selectedSports);
-    // hm2026 and fb are mutually exclusive — selecting one deselects the other
-    if (id === 'hm2026') next.delete('fb');
-    else if (id === 'fb') next.delete('hm2026');
+    // epl (English top flight) and fb are mutually exclusive — epl is a subset
+    // of football, so selecting one deselects the other.
+    if (id === 'epl') next.delete('fb');
+    else if (id === 'fb') next.delete('epl');
     next.has(id) ? next.delete(id) : next.add(id);
     setSelectedSports(next);
   };
@@ -162,33 +163,24 @@ function MobileApp({ dark, onThemeChange }) {
   // ── filtering + sorting ─────────────────────────────────────────────────────
   const favActive = selectedSports.has('fav');
   const sportIds = [...selectedSports].filter((s) => s !== 'fav');
-  const isWCEvent = (e) => {
-    if (e.sport === 'hm2026') return true;   // handvirkt HM-merkt (t.d. Dr. Football)
+  // "Enski boltinn" — men's English Premier League (see app.jsx for details).
+  const isEplEvent = (e) => {
     if (e.sport !== 'fb') return false;
     const hay = ((e.comp||'') + ' ' + (e.title||'') + ' ' + (e.sub||'')).toLowerCase();
-    if (hay.includes('world cup') || hay.includes('heimsbikar') || hay.includes('fifa')) return true;
-    if (/\bhm\b/.test(hay)) return true;
-    // RÚV: decode base64 image path and check for HM-specific filename patterns.
-    // Avoids false positives from Icelandic cup/league games (Fylkir, Grótta etc.)
-    // which also air on RÚV with empty comp/sub.
-    if (e.station === 'ruv' && e.image) {
-      try {
-        const b64 = e.image.replace(/^https?:\/\/[^/]+\//, '')
-                           .replace(/-/g, '+').replace(/_/g, '/');
-        const padded = b64 + '===='.slice(0, (4 - b64.length % 4) % 4);
-        const decoded = atob(padded).toLowerCase();
-        if (decoded.includes('hm_fotbolta') || decoded.includes('hm26') ||
-            decoded.includes('/hm_') || decoded.includes('/hm2')) return true;
-      } catch {}
-    }
+    if (/\bwomen'?s?\b|kvenna|\bdam(er)?\b/.test(hay)) return false;
+    if (/u21|u23|u18|premier league 2|\bpl2\b/.test(hay)) return false;
+    if (/scottish|welsh|egyptian|russian|ukrainian|indian|belarus|kazakh|\bnational league\b/.test(hay)) return false;
+    if (hay.includes('premier league')) return true;
+    if (hay.includes('enski boltinn') || hay.includes('enska úrvalsdeild') ||
+        hay.includes('enska urvalsdeild') || hay.includes('enska bikar')) return true;
     return false;
   };
-  const hmActive = sportIds.includes('hm2026');
-  const sportIdsNoHM = sportIds.filter(s => s !== 'hm2026');
+  const eplActive = sportIds.includes('epl');
+  const sportIdsNoEpl = sportIds.filter(s => s !== 'epl');
   const matchesSportFilter = (e) => {
     if (sportIds.length === 0) return true;
-    if (hmActive && isWCEvent(e)) return true;
-    if (sportIdsNoHM.length > 0 && sportIdsNoHM.includes(e.sport)) return true;
+    if (eplActive && isEplEvent(e)) return true;
+    if (sportIdsNoEpl.length > 0 && sportIdsNoEpl.includes(e.sport)) return true;
     return false;
   };
   const filtered = events
