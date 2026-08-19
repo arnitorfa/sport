@@ -527,10 +527,14 @@ export default async function handler(req, res) {
       payload.sources = sources;
       payload.cacheInfo = meta;
       payload.region = process.env.VERCEL_REGION || 'unknown';
-      // Which SUPABASE* env vars the function actually sees (names only —
-      // values are never exposed). Diagnoses "cacheEnabled: false" mysteries.
-      payload.supabaseEnvKeys = Object.keys(process.env)
-        .filter((k) => k.toUpperCase().includes('SUPABASE'));
+      // Which relevant env vars the function actually sees (NAMES only — values
+      // are never exposed). Diagnoses missing-key mysteries (Supabase cache,
+      // API-Football / football-data for La Liga, YouTube for CrossFit).
+      payload.envKeys = Object.keys(process.env).filter((k) => {
+        const u = k.toUpperCase();
+        return u.includes('SUPABASE') || u.includes('FOOTBALL') ||
+               u.includes('APISPORTS') || u.includes('YOUTUBE');
+      });
       // debug always bypasses the edge cache so the numbers are fresh
       res.setHeader('Cache-Control', 'no-store');
     } else if (events.length === 0 && sources && sources.every((s) => s.error)) {
