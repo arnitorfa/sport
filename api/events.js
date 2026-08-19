@@ -15,6 +15,7 @@ import { fetchLiveySchedule }  from '../fetchers/livey.js';
 import { TVNU_POOL_ORDER, fetchTvnuChannels, isVSportSlug } from '../fetchers/tvnu.js';
 import { fetchNbaSchedule } from '../fetchers/nba.js';
 import { fetchNflSchedule } from '../fetchers/nfl.js';
+import { fetchLaLigaSchedule } from '../fetchers/laliga.js';
 import { fetchYoutubeStreams } from '../fetchers/youtube.js';
 
 // ── Country → fetcher registry ─────────────────────────────────────────────
@@ -28,6 +29,7 @@ const COUNTRY_FETCHERS = {
     { name: 'Sýn',        fn: fetchSynSchedule },
     { name: 'Síminn',     fn: fetchSiminnSchedule },
     { name: 'Lívey',      fn: fetchLiveySchedule },
+    { name: 'Disney+',    fn: fetchLaLigaSchedule },
   ],
   se: [], // custom incremental flow — see fetchSwedenEvents
 };
@@ -205,11 +207,13 @@ async function fetchSwedenEvents(date, cachedState) {
   let viaplayOk = false;
 
   // 1) Direct APIs — all cheap, refreshed on every pass, run in parallel:
-  //    Viaplay SE (V Sport + streaming), NBA (League Pass), NFL (DAZN)
-  const [vpResult, nbaResult, nflResult] = await Promise.allSettled([
+  //    Viaplay SE (V Sport + streaming), NBA (League Pass), NFL (DAZN),
+  //    La Liga (Disney+)
+  const [vpResult, nbaResult, nflResult, laligaResult] = await Promise.allSettled([
     fetchViaplaySeSchedule(date, f),
     fetchNbaSchedule(date, f),
     fetchNflSchedule(date, f),
+    fetchLaLigaSchedule(date, f),
   ]);
 
   if (vpResult.status === 'fulfilled' && vpResult.value.length > 0) {
@@ -226,11 +230,12 @@ async function fetchSwedenEvents(date, cachedState) {
     sources.push({ name: 'Viaplay SE', error: vpResult.reason?.message });
   }
 
-  // NBA / NFL: replace that station's events when the fetch succeeded; on
-  // failure the previously cached ones stay in place.
+  // NBA / NFL / La Liga: replace that station's events when the fetch
+  // succeeded; on failure the previously cached ones stay in place.
   for (const [result, station, name] of [
     [nbaResult, 'nba', 'NBA League Pass'],
     [nflResult, 'dazn', 'DAZN · NFL'],
+    [laligaResult, 'disney', 'Disney+ · La Liga'],
   ]) {
     if (result.status === 'fulfilled') {
       events = events.filter((e) => e.station !== station);
