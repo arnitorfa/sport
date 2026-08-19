@@ -9,6 +9,15 @@ const BASE_URL = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/sco
 const TZ = 'Europe/Stockholm';
 const GAME_DURATION_MS = 3.25 * 60 * 60 * 1000;
 
+// ESPN 403s bot-ish User-Agents from datacenter IPs — send full browser headers.
+const HEADERS = {
+  'Accept': 'application/json, text/plain, */*',
+  'Accept-Language': 'en-US,en;q=0.9',
+  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+  'Referer': 'https://www.espn.com/nfl/',
+  'Origin': 'https://www.espn.com',
+};
+
 function slugify(s) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
@@ -67,9 +76,7 @@ export async function fetchNflSchedule(date, fetch) {
 
   const results = await Promise.allSettled(
     [fmt(dayBefore), fmt(date)].map(async (ds) => {
-      const resp = await fetch(`${BASE_URL}?dates=${ds}`, {
-        headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (compatible; sportzone/1.0)' },
-      });
+      const resp = await fetch(`${BASE_URL}?dates=${ds}`, { headers: HEADERS });
       if (!resp.ok) throw new Error(`ESPN NFL HTTP ${resp.status}`);
       const data = await resp.json();
       return data?.events || [];

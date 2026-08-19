@@ -12,6 +12,15 @@ const BASE_URL = 'https://site.api.espn.com/apis/site/v2/sports/soccer/esp.1/sco
 const TZ = 'Europe/Stockholm';
 const MATCH_DURATION_MS = 2 * 60 * 60 * 1000;
 
+// ESPN 403s bot-ish User-Agents from datacenter IPs — send full browser headers.
+const HEADERS = {
+  'Accept': 'application/json, text/plain, */*',
+  'Accept-Language': 'en-US,en;q=0.9',
+  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+  'Referer': 'https://www.espn.com/soccer/',
+  'Origin': 'https://www.espn.com',
+};
+
 function slugify(s) {
   return s.toLowerCase()
     .replace(/[áàä]/g, 'a').replace(/[éè]/g, 'e').replace(/[íì]/g, 'i')
@@ -68,9 +77,7 @@ export async function fetchLaLigaSchedule(date, fetch) {
   const dateStr = date.toISOString().slice(0, 10);
   const ds = dateStr.replace(/-/g, '');
 
-  const resp = await fetch(`${BASE_URL}?dates=${ds}`, {
-    headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (compatible; sportzone/1.0)' },
-  });
+  const resp = await fetch(`${BASE_URL}?dates=${ds}`, { headers: HEADERS });
   if (!resp.ok) throw new Error(`ESPN La Liga HTTP ${resp.status}`);
   const data = await resp.json();
 
