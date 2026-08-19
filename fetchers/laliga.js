@@ -168,8 +168,11 @@ async function fetchFromEspn(dateStr, fetch) {
 export async function fetchLaLigaSchedule(date, fetch) {
   const dateStr = date.toISOString().slice(0, 10);
 
-  // 1) API-Football (user's Pro subscription) — preferred
-  const afKey = process.env.API_FOOTBALL_KEY;
+  // 1) API-Football (user's Pro subscription) — preferred.
+  // Accept several common env-var names so a naming mismatch doesn't silently
+  // fall through to ESPN.
+  const afKey = process.env.API_FOOTBALL_KEY || process.env.FOOTBALL_API_KEY ||
+                process.env.APISPORTS_KEY || process.env.API_SPORTS_KEY;
   if (afKey) {
     try {
       const events = await fetchFromApiFootball(dateStr, fetch, afKey);
