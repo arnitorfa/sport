@@ -506,6 +506,21 @@ function MobileApp({ dark, onThemeChange }) {
         </div>
       </div>
 
+      {/* ── PREMIER LEAGUE BORÐI → pl.sportzone.is ── */}
+      <div style={{ padding: '10px 14px 2px' }}>
+        <a href="https://pl.sportzone.is" style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '9px 16px', borderRadius: 8,
+          border: `1.5px solid ${isDark ? '#C8FF3D' : '#F26419'}`,
+          background: isDark ? 'rgba(200,255,61,0.08)' : 'rgba(242,100,25,0.08)',
+          fontSize: 13, fontWeight: 700, letterSpacing: '0.02em',
+          color: isDark ? '#C8FF3D' : '#F26419',
+          textDecoration: 'none', fontFamily: 'inherit',
+        }}>
+          {t('pl.button')}
+        </a>
+      </div>
+
       {/* ── EVENT LIST ───────────────────────────────────────────────────────── */}
       <div style={{ padding: '8px 14px 32px' }}>
         {loadingEvents && (

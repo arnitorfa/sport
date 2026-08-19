@@ -1120,6 +1120,18 @@ function App() {
         })}
         {!isMobile && (
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 20 }}>
+            <a href="https://pl.sportzone.is" style={{
+              display: 'inline-flex', alignItems: 'center', gap: 7,
+              padding: '6px 14px', borderRadius: 8,
+              border: `1.5px solid ${pal.accent}`,
+              background: pal.accentSoft,
+              fontSize: 12.5, fontWeight: 700, letterSpacing: '0.02em',
+              color: pal.accent, textDecoration: 'none',
+              fontFamily: '"Inter", sans-serif',
+              whiteSpace: 'nowrap',
+            }}>
+              {t('pl.button')}
+            </a>
             <div style={{ color: pal.muted, fontSize: 11,
               fontFamily: '"JetBrains Mono", monospace', whiteSpace: 'nowrap' }}>
               {t('stats.shown', { n: filtered.length })}

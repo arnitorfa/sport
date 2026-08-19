@@ -114,6 +114,9 @@ window.IF_I18N = (function () {
       // World Cup button (Iceland only)
       'wc.button': 'World Cup schedule here!',
 
+      // Premier League banner → pl.sportzone.is
+      'pl.button': 'Premier League · Full schedule!',
+
       // Stats footer
       'stats.shown': '{n} events shown',
 
@@ -288,6 +291,9 @@ window.IF_I18N = (function () {
       // World Cup button (Iceland only)
       'wc.button': 'HM karla 2026 · Dagskráin hér!',
 
+      // Premier League banner → pl.sportzone.is
+      'pl.button': 'Enski boltinn · Dagskráin hér!',
+
       // Stats footer
       'stats.shown': '{n} viðburðir sýndir',
 
@@ -418,6 +424,9 @@ window.IF_I18N = (function () {
 
       // World Cup button (Iceland only)
       'wc.button': 'VM-tablån här!',
+
+      // Premier League banner → pl.sportzone.is
+      'pl.button': 'Premier League · Hela tablån!',
 
       // Stats footer
       'stats.shown': '{n} sändningar visas',
