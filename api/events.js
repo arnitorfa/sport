@@ -417,7 +417,10 @@ export default async function handler(req, res) {
     }
 
     // Country: 'is' (default) or 'se'
-    const country = COUNTRY_FETCHERS[req.query.country] ? req.query.country : 'is';
+    // Iceland-only. The Swedish site has been removed; the se/* code paths
+    // below are left dormant but are no longer reachable — any country param
+    // resolves to Iceland.
+    const country = 'is';
 
     const debug = req.query.debug === '1';
     const meta = { cacheEnabled: !!SUPABASE_SERVICE_KEY, cacheHit: false, cacheAgeMin: null, servedStale: false };

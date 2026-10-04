@@ -174,6 +174,23 @@ Sumar íþróttir eru streymdar frítt á YouTube (t.d. CrossFit Games). Til að
 
 Án lykils birtist CrossFit Games sem einn fastur dagsgluggi (15:00–23:59) í stað raunverulegu straumanna — virkar en er ónákvæmt. Kvóti API-sins (10.000 einingar/dag ókeypis) dugar vel; kerfið geymir svör í minni í 4 mín. Rásar-ID og tímabil eru stillt efst í `api/events.js` (`CROSSFIT_CHANNEL`, `CROSSFIT_START/END`).
 
+### La Liga á Disney+ (spænski boltinn) — nauðsynlegur lykill
+
+Frá tímabilinu 2026/27 er Disney+ með einkarétt á öllum La Liga leikjum á Norðurlöndunum. Dagskráin kemur frá **API-Football** (api-football.com) — ESPN blokkar IP-tölur Vercel með HTTP 403, svo það gengur ekki. `fetchers/laliga.js` reynir veiturnar í þessari röð (fyrsta með lykil vinnur):
+
+| Röð | Veita | Env-breyta | Athugasemd |
+|-----|-------|-----------|-----------|
+| 1 | **API-Football** (Pro) | `API_FOOTBALL_KEY` | Aðal — áreiðanlegast, blokkar ekki gagnaver |
+| 2 | football-data.org | `FOOTBALL_DATA_API_KEY` | Ókeypis varaleið |
+| 3 | ESPN | — (enginn lykill) | Virkar aðeins á NAS/staðbundið, ekki Vercel |
+
+**Uppsetning (API-Football):**
+
+1. Sæktu lykilinn í [api-football.com](https://www.api-football.com) → Dashboard (þetta er `x-apisports-key` lykillinn þinn).
+2. **Vercel → Settings → Environment Variables** → `API_FOOTBALL_KEY` = lykillinn (Production) → **Redeploy**.
+
+Kerfið sækir La Liga leiki dagsins (deild 140) fyrir hvert land og geymir í Supabase-cache eins og aðrar veitur. Leikirnir birtast undir „Fótbolti" og Disney+ stöðinni í báðum löndum. Sama API-Football áskrift getur seinna knúið fleiri deildir (t.d. Meistaradeild, Serie A) með sömu aðferð.
+
 ---
 
 ## 3. Uppfæra merkið og nafnið

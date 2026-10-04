@@ -8,7 +8,6 @@
   },
   "rewrites": [
     { "source": "/api/events", "destination": "/api/events" },
-    { "source": "/worldcup", "destination": "/worldcup.html" },
-    { "source": "/se", "destination": "/index.html" }
+    { "source": "/worldcup", "destination": "/worldcup.html" }
   ]
 }

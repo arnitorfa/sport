@@ -79,7 +79,6 @@ function App() {
   const [logos, setLogos] = React.useState(() => readLS(LS.logos, {}));
   const [showLogos, setShowLogos] = React.useState(false);
   const [moreSportsOpen, setMoreSportsOpen] = React.useState(false);
-  const [countryMenu, setCountryMenu] = React.useState(false);
 
   // ── responsive: detect mobile ──
   const [isMobile, setIsMobile] = React.useState(() => window.innerWidth < 768);
@@ -888,57 +887,6 @@ function App() {
           ) : (
             <span style={ifS.kbd}>⌘ K</span>
           )}
-        </div>
-
-        {/* Country picker */}
-        <div style={{ position: 'relative', flexShrink: 0 }}>
-          <button
-            style={{ ...ifS.iconBtn, width: 'auto', padding: '0 11px', gap: 7,
-                     fontSize: 12.5, fontWeight: 600, letterSpacing: '-0.01em' }}
-            onClick={() => setCountryMenu((m) => !m)}
-            title={t('country.pick')}
-            aria-label={t('country.pick')}
-            aria-expanded={countryMenu}>
-            <span style={{ fontSize: 15, lineHeight: 1 }}>{(countryList[activeCountry] || {}).flag}</span>
-            <span>{activeCountry.toUpperCase()}</span>
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                 strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-                 style={{ transform: countryMenu ? 'rotate(180deg)' : 'none' }}>
-              <path d="M6 9l6 6 6-6" />
-            </svg>
-          </button>
-          {countryMenu &&
-            <div style={{
-              position: 'absolute', top: 44, right: 0, minWidth: 170,
-              background: pal.card, border: `1px solid ${pal.hair}`,
-              borderRadius: 12, padding: 6, zIndex: 120,
-              boxShadow: '0 12px 40px rgba(0,0,0,0.18)'
-            }}
-            onMouseLeave={() => setCountryMenu(false)}>
-              {Object.values(countryList).map((c) => (
-                <button key={c.id}
-                  onClick={() => {
-                    setCountryMenu(false);
-                    if (c.id !== activeCountry) window.location.href = c.path;
-                  }}
-                  style={{
-                    width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-                    padding: '9px 10px', borderRadius: 8, border: 'none',
-                    background: c.id === activeCountry ? pal.accentSoft : 'transparent',
-                    color: pal.fg, fontSize: 12.5, fontWeight: c.id === activeCountry ? 700 : 500,
-                    cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left'
-                  }}>
-                  <span style={{ fontSize: 16, lineHeight: 1 }}>{c.flag}</span>
-                  <span>{c.name}</span>
-                  {c.id === activeCountry &&
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={pal.accent}
-                         strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-                         style={{ marginLeft: 'auto' }}>
-                      <path d="M20 6L9 17l-5-5" />
-                    </svg>}
-                </button>
-              ))}
-            </div>}
         </div>
 
         {/* Theme toggle */}

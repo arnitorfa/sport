@@ -36,7 +36,6 @@ function MobileApp({ dark, onThemeChange }) {
   const [starSheetFor, setStarSheetFor] = React.useState(null);
   const [searchOpen, setSearchOpen] = React.useState(false);
   const [search, setSearch] = React.useState('');
-  const [countryMenu, setCountryMenu] = React.useState(false);
 
   // ── API fetch ───────────────────────────────────────────────────────────────
   const [events, setEvents] = React.useState([]);
@@ -257,43 +256,6 @@ function MobileApp({ dark, onThemeChange }) {
         />
         {/* button row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
-        {/* Country picker */}
-        <div style={{ position: 'relative' }}>
-          <button
-            onClick={() => setCountryMenu((m) => !m)}
-            aria-label={t('country.pick')}
-            aria-expanded={countryMenu}
-            style={{ ...mIconBtn(pal), width: 'auto', padding: '0 9px', gap: 5,
-                     fontSize: 12, fontWeight: 700, letterSpacing: '-0.01em' }}>
-            <span style={{ fontSize: 14, lineHeight: 1 }}>{(countryList[activeCountry] || {}).flag}</span>
-            {activeCountry.toUpperCase()}
-          </button>
-          {countryMenu &&
-            <div style={{
-              position: 'absolute', top: 40, left: 0, minWidth: 150,
-              background: pal.card, border: `1px solid ${pal.hair}`,
-              borderRadius: 12, padding: 6, zIndex: 60,
-              boxShadow: '0 12px 40px rgba(0,0,0,0.25)'
-            }}>
-              {Object.values(countryList).map((c) => (
-                <button key={c.id}
-                  onClick={() => {
-                    setCountryMenu(false);
-                    if (c.id !== activeCountry) window.location.href = c.path;
-                  }}
-                  style={{
-                    width: '100%', display: 'flex', alignItems: 'center', gap: 9,
-                    padding: '10px 10px', borderRadius: 8, border: 'none',
-                    background: c.id === activeCountry ? pal.accentSoft : 'transparent',
-                    color: pal.fg, fontSize: 13, fontWeight: c.id === activeCountry ? 700 : 500,
-                    cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left'
-                  }}>
-                  <span style={{ fontSize: 15, lineHeight: 1 }}>{c.flag}</span>
-                  <span>{c.name}</span>
-                </button>
-              ))}
-            </div>}
-        </div>
         <a href="https://ko-fi.com/torfason" target="_blank" rel="noopener noreferrer"
            title={t('nav.kofi')}
            style={{ ...mIconBtn(pal), textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
