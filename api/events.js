@@ -59,7 +59,7 @@ const SUPABASE_URL = process.env.SUPABASE_URL || 'https://kbmjtondcqupdsumgyex.s
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const CACHE_FRESH_MS = 45 * 60 * 1000;        // refetch upstream after 45 minutes
 const CACHE_FRESH_PARTIAL_MS = 3 * 60 * 1000;  // incomplete fetches take the next incremental step sooner
-const SERVE_STALE_MAX_MS = 12 * 60 * 60 * 1000; // serve-while-refreshing window
+const SERVE_STALE_MAX_MS = 72 * 60 * 60 * 1000; // serve-while-refreshing window (3 days)
 const TVNU_BATCH_SIZE = 8;                     // max tv.nu channels per invocation
 
 // Schedule work to continue AFTER the response is sent. On Vercel this uses
@@ -476,41 +476,57 @@ export default async function handler(req, res) {
         meta.partial = result.partial;
       }
     } else {
-      // 2b) Full upstream fan-out (Iceland)
-      console.log(`Fetching events for ${dateStr} (${country})...`);
-      const date = new Date(dateStr + 'T00:00:00Z');
-      const result = await fetchAllEvents(date, country);
-      sources = result.sources;
-      const allFailed = sources.every((s) => s.error);
-      const partial = sources.some((s) => s.error || s.failedChannels);
-      meta.partial = partial;
+      // 2b) Iceland. One upstream fan-out (RÚV, Viaplay, Sýn, Síminn, Lívey,
+      // Disney+) can take many seconds — so, exactly like Sweden, we serve a
+      // stale-but-real cached copy INSTANTLY and refresh in the background.
+      // This is what fixes the slow "first load after inactivity".
+      const refreshIs = async () => {
+        console.log(`Fetching events for ${dateStr} (${country})...`);
+        const date = new Date(dateStr + 'T00:00:00Z');
+        const result = await fetchAllEvents(date, country);
+        const srcs = result.sources;
+        const allFailed = srcs.every((s) => s.error);
+        const partial = srcs.some((s) => s.error || s.failedChannels);
 
-      if (!allFailed) {
-        events = result.events;
-        // Bæta við Dr. Football YouTube þætti ef við á (aðeins Ísland)
-        if (country === 'is') {
-          const drFb = drFootballEvent(dateStr);
-          if (drFb) events.push(drFb);
+        if (!allFailed) {
+          const evs = result.events;
+          const drFb = drFootballEvent(dateStr); // aðeins á HM-tímabili (óvirkt núna)
+          if (drFb) evs.push(drFb);
+          sortEvents(evs);
+          // Don't overwrite a fuller cached copy with a worse partial one
+          if (partial && cached && cached.events.length > evs.length) {
+            return { events: recomputeStatus(cached.events), sources: srcs, partial, fromStale: true };
+          }
+          await cacheWrite(country, dateStr, { v: 2, events: evs, partial });
+          return { events: evs, sources: srcs, partial, fromStale: false };
         }
-        sortEvents(events);
-        // Don't overwrite a fuller cached copy with a worse partial one
-        const worseThanCache = partial && cached && cached.events.length > events.length;
-        if (worseThanCache) {
-          events = recomputeStatus(cached.events);
-          meta.servedStale = true;
-          meta.cacheAgeMin = Math.round(cached.ageMs / 60000);
-        } else {
-          // Persist (fire and forget); partial results get a shorter freshness
-          cacheWrite(country, dateStr, { v: 2, events, partial });
+        // Every upstream failed → fall back to the stale cached copy if any
+        if (cached) {
+          console.warn(`All sources failed for ${country}/${dateStr} — serving stale cache`);
+          return { events: recomputeStatus(cached.events), sources: srcs, partial: cached.partial, fromStale: true };
         }
-      } else if (cached) {
-        // 3) Every upstream failed → serve the stale-but-real cached copy
+        return { events: [], sources: srcs, partial, fromStale: false };
+      };
+
+      if (cached && cached.ageMs < SERVE_STALE_MAX_MS && !debug) {
+        // FAST PATH — instant response from cache, refresh after it's sent
         events = recomputeStatus(cached.events);
+        meta.cacheHit = true;
         meta.servedStale = true;
+        meta.partial = cached.partial;
         meta.cacheAgeMin = Math.round(cached.ageMs / 60000);
-        console.warn(`All sources failed for ${country}/${dateStr} — serving stale cache (${meta.cacheAgeMin} min old)`);
+        await runInBackground(refreshIs().catch((e) =>
+          console.error('IS background refresh failed:', e.message)));
       } else {
-        events = [];
+        // No usable cache (brand-new date) or debug mode — fetch inline
+        const result = await refreshIs();
+        events = result.events;
+        sources = result.sources;
+        meta.partial = result.partial;
+        if (result.fromStale) {
+          meta.servedStale = true;
+          if (cached) meta.cacheAgeMin = Math.round(cached.ageMs / 60000);
+        }
       }
     }
 
