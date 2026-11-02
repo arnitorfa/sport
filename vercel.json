@@ -4,8 +4,14 @@
   "functions": {
     "api/events.js": {
       "maxDuration": 30
+    },
+    "api/warm.js": {
+      "maxDuration": 60
     }
   },
+  "crons": [
+    { "path": "/api/warm", "schedule": "0 6 * * *" }
+  ],
   "rewrites": [
     { "source": "/api/events", "destination": "/api/events" },
     { "source": "/worldcup", "destination": "/worldcup.html" }
